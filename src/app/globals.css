@@ -1,0 +1,302 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 99%;
+    --foreground: 240 6% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 6% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 6% 10%;
+    --primary: 256 77% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 6% 10%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 256 77% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 256 77% 60%;
+    --radius: 0.5rem;
+    --sidebar: 240 6% 97%;
+    --sidebar-foreground: 240 6% 10%;
+    --sidebar-border: 240 6% 90%;
+    --sidebar-accent: 256 77% 60%;
+    --success: 142 71% 45%;
+    --danger: 0 72% 51%;
+  }
+
+  .dark {
+    --background: 240 5% 8%;
+    --foreground: 0 0% 93%;
+    --card: 240 5% 12%;
+    --card-foreground: 0 0% 93%;
+    --popover: 240 5% 12%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 256 77% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 15%;
+    --secondary-foreground: 0 0% 93%;
+    --muted: 240 5% 15%;
+    --muted-foreground: 0 0% 55%;
+    --accent: 256 77% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 5% 18%;
+    --input: 240 5% 18%;
+    --ring: 256 77% 60%;
+    --radius: 0.5rem;
+    --sidebar: 240 5% 10%;
+    --sidebar-foreground: 0 0% 93%;
+    --sidebar-border: 240 5% 15%;
+    --sidebar-accent: 256 77% 60%;
+    --success: 142 71% 45%;
+    --danger: 0 72% 51%;
+  }
+
+  /* Midnight theme */
+  [data-color-theme="midnight"] {
+    --primary: 217 91% 60%;
+    --accent: 217 91% 60%;
+    --ring: 217 91% 60%;
+    --sidebar-accent: 217 91% 60%;
+  }
+  .dark[data-color-theme="midnight"] {
+    --background: 220 20% 8%;
+    --card: 220 20% 12%;
+    --popover: 220 20% 12%;
+    --secondary: 220 15% 15%;
+    --muted: 220 15% 15%;
+    --border: 220 15% 18%;
+    --input: 220 15% 18%;
+    --sidebar: 220 20% 10%;
+    --sidebar-border: 220 15% 15%;
+    --primary: 217 91% 60%;
+    --accent: 217 91% 60%;
+    --ring: 217 91% 60%;
+    --sidebar-accent: 217 91% 60%;
+  }
+
+  /* Forest theme */
+  [data-color-theme="forest"] {
+    --primary: 142 71% 45%;
+    --accent: 142 71% 45%;
+    --ring: 142 71% 45%;
+    --sidebar-accent: 142 71% 45%;
+  }
+  .dark[data-color-theme="forest"] {
+    --background: 150 10% 8%;
+    --card: 150 10% 12%;
+    --popover: 150 10% 12%;
+    --secondary: 150 8% 15%;
+    --muted: 150 8% 15%;
+    --border: 150 8% 18%;
+    --input: 150 8% 18%;
+    --sidebar: 150 10% 10%;
+    --sidebar-border: 150 8% 15%;
+    --primary: 142 71% 45%;
+    --accent: 142 71% 45%;
+    --ring: 142 71% 45%;
+    --sidebar-accent: 142 71% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Linear-style scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.3);
+}
+
+/* Compact mode */
+.compact-mode .compact\:p-3 { padding: 0.75rem; }
+.compact-mode table td,
+.compact-mode table th {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+  font-size: 0.8125rem;
+}
+.compact-mode .grid {
+  gap: 0.75rem;
+}
+.compact-mode [class*="CardContent"] {
+  padding: 1rem;
+}
+.compact-mode h1 {
+  font-size: 1.25rem;
+}
+.compact-mode .text-2xl {
+  font-size: 1.25rem;
+}
+.compact-mode .text-xl {
+  font-size: 1rem;
+}
+
+/* Accessibility - Focus visible styles */
+*:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Screen reader only utility (already in tailwind but ensure it's available) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* cmdk styles */
+[cmdk-root] {
+  font-family: inherit;
+}
+[cmdk-input] {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+}
+[cmdk-group-heading] {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+}
+[cmdk-item] {
+  cursor: pointer;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+[cmdk-item][data-selected="true"] {
+  background: hsl(var(--muted));
+}
+[cmdk-empty] {
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Print-friendly styles */
+@media print {
+  /* Hide navigation and interactive elements */
+  aside,
+  .fixed,
+  button:not(.print-visible),
+  [role="dialog"],
+  [cmdk-root],
+  nav {
+    display: none !important;
+  }
+
+  /* Reset layout */
+  main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  /* Cards and tables for print */
+  .card,
+  [class*="Card"] {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  table th,
+  table td {
+    border: 1px solid #ddd !important;
+    padding: 6px 8px !important;
+    font-size: 10pt !important;
+  }
+
+  /* Ensure text is readable */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Show full URLs for links */
+  a[href]::after {
+    content: none;
+  }
+
+  /* Page margins */
+  @page {
+    margin: 1.5cm;
+  }
+
+  /* Badge adjustments */
+  [class*="Badge"] {
+    border: 1px solid #999 !important;
+    padding: 1px 6px !important;
+  }
+
+  /* Progress bars */
+  [class*="Progress"] {
+    border: 1px solid #ddd !important;
+  }
+
+  /* Charts - show but don't break */
+  .recharts-wrapper {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Hide FAB and quick actions */
+  .quick-actions,
+  [class*="QuickActions"],
+  [class*="quick-action"] {
+    display: none !important;
+  }
+}
