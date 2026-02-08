@@ -49,7 +49,8 @@ export default function BrandingPage() {
     });
     setSaving(false);
     if (res.ok) {
-      toast.success("Branding atualizado! Recarregue para ver as mudanças.");
+      toast.success("Branding atualizado! Recarregando...");
+      setTimeout(() => window.location.reload(), 1000);
     } else {
       toast.error("Erro ao salvar");
     }
