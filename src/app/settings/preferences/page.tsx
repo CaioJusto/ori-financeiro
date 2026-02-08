@@ -126,10 +126,10 @@ export default function PreferencesPage() {
                 </div>
                 <div>
                   <Label>Conta Padrão</Label>
-                  <Select value={prefs.defaultAccountId || ""} onValueChange={v => setPrefs({ ...prefs, defaultAccountId: v || null })}>
+                  <Select value={prefs.defaultAccountId || "none"} onValueChange={v => setPrefs({ ...prefs, defaultAccountId: v === "none" ? null : v })}>
                     <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhuma</SelectItem>
+                      <SelectItem value="none">Nenhuma</SelectItem>
                       {accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
