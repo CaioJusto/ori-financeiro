@@ -33,14 +33,18 @@ export async function GET(req: NextRequest) {
 
   const cats = Array.from(catMap.values()).sort((a, b) => b.total - a.total);
 
-  const buf = await chartJSNodeCanvas.renderToBuffer({
-    type: "pie",
-    data: {
-      labels: cats.map((c) => c.name),
-      datasets: [{ data: cats.map((c) => c.total), backgroundColor: cats.map((c) => c.color) }],
-    },
-    options: { plugins: { title: { display: true, text: "Gastos por Categoria", font: { size: 18 } } } },
-  });
+  const format = searchParams.get("format");
+  if (format === "png") {
+    const buf = await chartJSNodeCanvas.renderToBuffer({
+      type: "pie",
+      data: {
+        labels: cats.map((c) => c.name),
+        datasets: [{ data: cats.map((c) => c.total), backgroundColor: cats.map((c) => c.color) }],
+      },
+      options: { plugins: { title: { display: true, text: "Gastos por Categoria", font: { size: 18 } } } },
+    });
+    return new NextResponse(new Uint8Array(buf), { headers: { "Content-Type": "image/png" } });
+  }
 
-  return new NextResponse(new Uint8Array(buf), { headers: { "Content-Type": "image/png" } });
+  return NextResponse.json(cats);
 }

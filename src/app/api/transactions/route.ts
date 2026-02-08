@@ -57,7 +57,11 @@ export async function POST(req: NextRequest) {
   if (error) return error;
 
   const body = await req.json();
+  if (!body.description || !body.amount || !body.type || !body.date || !body.accountId || !body.categoryId) {
+    return NextResponse.json({ error: "description, amount, type, date, accountId, and categoryId are required" }, { status: 400 });
+  }
   const tagIds: string[] = body.tagIds || [];
+  try {
   const transaction = await prisma.transaction.create({
     data: {
       description: body.description,
@@ -75,4 +79,11 @@ export async function POST(req: NextRequest) {
   });
   await logAudit("create", "transaction", transaction.id, { description: body.description, amount: body.amount, type: body.type }, tenant.tenantId);
   return NextResponse.json(transaction);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    if (msg.includes("Foreign key constraint")) {
+      return NextResponse.json({ error: "Invalid accountId or categoryId" }, { status: 400 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

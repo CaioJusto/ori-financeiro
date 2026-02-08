@@ -29,20 +29,24 @@ export async function GET(req: NextRequest) {
     expenseData.push(monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0));
   }
 
-  const buf = await chartJSNodeCanvas.renderToBuffer({
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        { label: "Receitas", data: incomeData, backgroundColor: "rgba(34,197,94,0.7)" },
-        { label: "Despesas", data: expenseData, backgroundColor: "rgba(239,68,68,0.7)" },
-      ],
-    },
-    options: {
-      plugins: { title: { display: true, text: "Receitas vs Despesas", font: { size: 18 } } },
-      scales: { y: { beginAtZero: true } },
-    },
-  });
+  const format = new URL(req.url).searchParams.get("format");
+  if (format === "png") {
+    const buf = await chartJSNodeCanvas.renderToBuffer({
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "Receitas", data: incomeData, backgroundColor: "rgba(34,197,94,0.7)" },
+          { label: "Despesas", data: expenseData, backgroundColor: "rgba(239,68,68,0.7)" },
+        ],
+      },
+      options: {
+        plugins: { title: { display: true, text: "Receitas vs Despesas", font: { size: 18 } } },
+        scales: { y: { beginAtZero: true } },
+      },
+    });
+    return new NextResponse(new Uint8Array(buf), { headers: { "Content-Type": "image/png" } });
+  }
 
-  return new NextResponse(new Uint8Array(buf), { headers: { "Content-Type": "image/png" } });
+  return NextResponse.json({ labels, income: incomeData, expense: expenseData });
 }

@@ -2,6 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/tenant";
 
+export async function GET() {
+  return POST();
+}
+
 export async function POST() {
   const { error, tenant } = await requirePermission("notifications:read");
   if (error) return error;

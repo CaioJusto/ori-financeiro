@@ -13,9 +13,21 @@ export async function POST(req: NextRequest) {
   const { error, tenant } = await requirePermission("budgets:write");
   if (error) return error;
   const body = await req.json();
-  const budget = await prisma.budget.create({
-    data: { categoryId: body.categoryId, amount: parseFloat(body.amount), month: body.month, tenantId: tenant.tenantId },
-    include: { category: true },
-  });
-  return NextResponse.json(budget);
+  if (!body.categoryId || !body.amount) {
+    return NextResponse.json({ error: "categoryId and amount are required" }, { status: 400 });
+  }
+  const month = body.month || new Date().toISOString().slice(0, 7);
+  try {
+    const budget = await prisma.budget.create({
+      data: { categoryId: body.categoryId, amount: parseFloat(body.amount), month, tenantId: tenant.tenantId },
+      include: { category: true },
+    });
+    return NextResponse.json(budget);
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    if (msg.includes("Foreign key constraint")) {
+      return NextResponse.json({ error: "Invalid categoryId" }, { status: 400 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
