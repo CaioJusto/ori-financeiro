@@ -1,9 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
+
+const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 const CURRENT_VERSION = "2.0.0";
 
@@ -37,8 +40,10 @@ const typeColor = { feature: "default" as const, improvement: "secondary" as con
 
 export function ChangelogModal() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
+    if (AUTH_ROUTES.some(r => pathname?.startsWith(r))) { setOpen(false); return; }
     const seen = localStorage.getItem("changelog_seen");
     if (seen !== CURRENT_VERSION) setOpen(true);
   }, []);

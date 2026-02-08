@@ -2,16 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/layout/providers";
-import { Sidebar } from "@/components/layout/sidebar";
-import { CommandPaletteWrapper } from "@/components/command-palette-wrapper";
-import { BreadcrumbsWrapper } from "@/components/breadcrumbs-wrapper";
-import { Onboarding } from "@/components/onboarding";
-import { ProductTour } from "@/components/product-tour";
-import { KeyboardShortcutsOverlay } from "@/components/keyboard-shortcuts-overlay";
-import { ChangelogModal } from "@/components/changelog-modal";
-import { QuickActions } from "@/components/quick-actions";
-import { PwaPrompts } from "@/components/pwa-prompts";
-import { ChatWidget } from "@/components/chat-widget";
+import { AuthAwareLayout } from "@/components/layout/auth-aware-layout";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -39,23 +30,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Pular para o conteúdo
         </a>
         <Providers>
-          <Onboarding />
-          <ProductTour />
-          <KeyboardShortcutsOverlay />
-          <ChangelogModal />
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <CommandPaletteWrapper />
-            <main id="main-content" className="flex-1 md:ml-[240px] min-h-screen" role="main">
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                <BreadcrumbsWrapper />
-                {children}
-              </div>
-            </main>
-            <QuickActions />
-            <PwaPrompts />
-            <ChatWidget />
-          </div>
+          <AuthAwareLayout>
+            {children}
+          </AuthAwareLayout>
         </Providers>
       </body>
     </html>

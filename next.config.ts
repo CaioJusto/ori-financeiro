@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ["chartjs-node-canvas", "canvas"],
-  },
   serverExternalPackages: ["chartjs-node-canvas", "canvas", "xlsx"],
   async headers() {
     return [

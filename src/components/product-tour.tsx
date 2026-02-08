@@ -1,5 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+
+const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, ArrowLeftRight, LayoutDashboard, Sparkles, Target, PiggyBank, Navigation } from "lucide-react";
@@ -52,8 +55,10 @@ const tourSteps = [
 export function ProductTour() {
   const [show, setShow] = useState(false);
   const [step, setStep] = useState(0);
+  const pathname = usePathname();
 
   useEffect(() => {
+    if (AUTH_ROUTES.some(r => pathname?.startsWith(r))) { setShow(false); return; }
     if (typeof window !== "undefined") {
       const completed = localStorage.getItem("product_tour_completed");
       const onboardingDone = localStorage.getItem("onboarding_completed");

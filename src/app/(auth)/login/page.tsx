@@ -31,8 +31,7 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Email ou senha inválidos. Verifique suas credenciais e tente novamente.");
       } else {
-        router.push("/");
-        router.refresh();
+        window.location.href = "/";
       }
     } catch (err) {
       setError("Ocorreu um erro ao fazer login. Tente novamente.");
