@@ -132,6 +132,7 @@ export function Sidebar() {
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [colorTheme, setColorTheme] = useState<string>("default");
   const [healthScore, setHealthScore] = useState<number | null>(null);
+  const [brandName, setBrandName] = useState("Ori Financeiro");
   const [overdueCount, setOverdueCount] = useState(0);
 
   const userPermissions = useMemo(() => {
@@ -202,6 +203,7 @@ export function Sidebar() {
   // Load health score and overdue count
   useEffect(() => {
     fetch("/api/health-score").then(r => r.json()).then(d => setHealthScore(d.score)).catch(() => {});
+    fetch("/api/tenant").then(r => r.json()).then(d => { if (d?.systemName) setBrandName(d.systemName); }).catch(() => {});
     fetch("/api/dashboard/widgets").then(r => r.json()).then(d => setOverdueCount(d.overdueCount || 0)).catch(() => {});
   }, []);
 
@@ -216,9 +218,9 @@ export function Sidebar() {
       <div className="flex items-center justify-between h-12 px-4 shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-5 h-5 rounded bg-[hsl(var(--sidebar-accent))] flex items-center justify-center">
-            <span className="text-[10px] font-bold text-white">O</span>
+            <span className="text-[10px] font-bold text-white">{brandName.charAt(0).toUpperCase()}</span>
           </div>
-          <span className="text-sm font-semibold text-[hsl(var(--sidebar-foreground))]">Ori Financeiro</span>
+          <span className="text-sm font-semibold text-[hsl(var(--sidebar-foreground))]">{brandName}</span>
           {healthScore !== null && (
             <div className={cn("w-2 h-2 rounded-full shrink-0", healthScore >= 70 ? "bg-emerald-500" : healthScore >= 40 ? "bg-amber-500" : "bg-red-500")}
               title={`Saúde financeira: ${healthScore}/100`} />
