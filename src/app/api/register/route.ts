@@ -48,7 +48,10 @@ const ALL_PERMISSIONS = [
 
 export async function POST(req: NextRequest) {
   try {
-    const { tenantName, adminName, email, password } = await req.json();
+    const body = await req.json();
+    const tenantName = body.tenantName || body.companyName;
+    const adminName = body.adminName || body.name;
+    const { email, password } = body;
 
     if (!tenantName || !adminName || !email || !password) {
       return NextResponse.json({ error: "Todos os campos são obrigatórios" }, { status: 400 });

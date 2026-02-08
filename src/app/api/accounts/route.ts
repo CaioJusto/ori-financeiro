@@ -32,8 +32,16 @@ export async function POST(req: NextRequest) {
   const { error, tenant } = await requirePermission("accounts:write");
   if (error) return error;
 
-  const body = await req.json();
-  const account = await prisma.account.create({ data: { name: body.name, type: body.type || "personal", color: body.color || "#3b82f6", currency: body.currency || "BRL", tenantId: tenant.tenantId } });
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
+  if (!body.name || typeof body.name !== "string" || body.name.trim() === "") {
+    return NextResponse.json({ error: "Field 'name' is required" }, { status: 400 });
+  }
+  const account = await prisma.account.create({ data: { name: body.name as string, type: (body.type as string) || "personal", color: (body.color as string) || "#3b82f6", currency: (body.currency as string) || "BRL", tenantId: tenant.tenantId } });
   await logAudit("create", "account", account.id, { name: body.name }, tenant.tenantId);
   return NextResponse.json(account);
 }

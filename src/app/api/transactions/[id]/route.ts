@@ -3,6 +3,18 @@ import { logAudit } from "@/lib/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/tenant";
 
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { error, tenant } = await requirePermission("transactions:read");
+  if (error) return error;
+  const { id } = await params;
+  const transaction = await prisma.transaction.findUnique({
+    where: { id, tenantId: tenant.tenantId },
+    include: { account: true, category: true, tags: { include: { tag: true } } },
+  });
+  if (!transaction) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(transaction);
+}
+
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error, tenant } = await requirePermission("transactions:write");
   if (error) return error;
