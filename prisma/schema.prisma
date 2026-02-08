@@ -1065,6 +1065,7 @@ model GoalComment {
 model ChatConversation {
   id        String        @id @default(cuid())
   title     String        @default("Nova conversa")
+  pinned    Boolean       @default(false)
   tenantId  String
   tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId    String

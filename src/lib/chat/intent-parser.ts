@@ -2,8 +2,11 @@ export type IntentAction =
   | "create_expense"
   | "create_income"
   | "create_transfer"
+  | "create_installment"
+  | "create_scheduled"
   | "query_expenses"
   | "query_expenses_by_category"
+  | "query_expenses_by_amount"
   | "delete_last_transaction"
   | "query_balance"
   | "monthly_summary"
@@ -16,6 +19,12 @@ export type IntentAction =
   | "financial_tip"
   | "savings_suggestions"
   | "spending_analysis"
+  | "period_comparison"
+  | "top_spending_category"
+  | "spending_forecast"
+  | "daily_budget"
+  | "average_monthly_spending"
+  | "export_transactions"
   | "greeting"
   | "help"
   | "unknown";
@@ -31,7 +40,10 @@ export interface ParsedIntent {
     accountTo?: string;
     date?: string;
     month?: string;
+    month2?: string;
     goalName?: string;
+    installments?: number;
+    minAmount?: number;
   };
   confidence: number;
   raw: string;
@@ -52,7 +64,6 @@ const WORD_NUMBERS: Record<string, number> = {
 };
 
 function parseAmount(text: string): number | undefined {
-  // R$1.234,56 or R$ 1234.56 or 50 reais
   const patterns = [
     /R\$\s*([\d.,]+)/i,
     /([\d.,]+)\s*reais/i,
@@ -61,12 +72,11 @@ function parseAmount(text: string): number | undefined {
   for (const p of patterns) {
     const m = text.match(p);
     if (m) {
-      let val = m[1].replace(/\./g, "").replace(",", ".");
+      const val = m[1].replace(/\./g, "").replace(",", ".");
       const num = parseFloat(val);
       if (!isNaN(num)) return num;
     }
   }
-  // Word numbers: "cinquenta reais"
   for (const [word, val] of Object.entries(WORD_NUMBERS)) {
     if (text.toLowerCase().includes(word + " reais") || text.toLowerCase().includes(word + " real")) {
       return val;
@@ -111,8 +121,20 @@ function parseMonth(text: string): string | undefined {
   return undefined;
 }
 
+function parseComparisonMonths(text: string): { month1?: string; month2?: string } {
+  const lower = text.toLowerCase();
+  const months: string[] = [];
+  for (const [name, num] of Object.entries(MONTH_MAP)) {
+    if (lower.includes(name)) {
+      months.push(`${new Date().getFullYear()}-${num}`);
+    }
+  }
+  if (months.length >= 2) return { month1: months[0], month2: months[1] };
+  return {};
+}
+
 function extractCategory(text: string): string | undefined {
-  const m = text.match(/(?:em|de|na|no|para|categoria)\s+([a-záàâãéèêíóôõúç\s]+?)(?:\s+(?:hoje|ontem|dia|no|na|do|da|$))/i);
+  const m = text.match(/(?:em|de|na|no|para|categoria)\s+([a-záàâãéèêíóôõúç\s]+?)(?:\s+(?:hoje|ontem|dia|no|na|do|da|acima|abaixo|$))/i);
   if (m) return m[1].trim();
   return undefined;
 }
@@ -135,6 +157,23 @@ function extractGoalName(text: string): string | undefined {
   return undefined;
 }
 
+function extractInstallments(text: string): number | undefined {
+  const m = text.match(/(\d+)\s*(?:x|vezes|parcelas?)/i);
+  if (m) return parseInt(m[1]);
+  const m2 = text.match(/em\s+(\d+)\s*(?:x|vezes|parcelas?)/i);
+  if (m2) return parseInt(m2[1]);
+  return undefined;
+}
+
+function extractMinAmount(text: string): number | undefined {
+  const m = text.match(/acima\s+de\s+R?\$?\s*([\d.,]+)/i);
+  if (m) {
+    const val = m[1].replace(/\./g, "").replace(",", ".");
+    return parseFloat(val);
+  }
+  return undefined;
+}
+
 export function parseIntent(text: string): ParsedIntent {
   const lower = text.toLowerCase().trim();
   const amount = parseAmount(text);
@@ -150,6 +189,55 @@ export function parseIntent(text: string): ParsedIntent {
   // Help
   if (/^(ajuda|help|o que você faz|comandos|como funciona)/i.test(lower)) {
     return { action: "help", params: {}, confidence: 0.9, raw: text };
+  }
+
+  // Installment
+  if (/parcel(ar|ado|amento)|em\s+\d+\s*x/i.test(lower)) {
+    const installments = extractInstallments(text);
+    const desc = text.replace(/^.*?(parcel(ar|ado|amento))\s*/i, "").trim();
+    return { action: "create_installment", params: { amount, installments, category, description: desc || undefined, date }, confidence: 0.85, raw: text };
+  }
+
+  // Scheduled payment
+  if (/agendar|agendamento|recorrente|todo\s+m(ê|e)s|mensal(mente)?/i.test(lower) && amount) {
+    return { action: "create_scheduled", params: { amount, description: text, date }, confidence: 0.8, raw: text };
+  }
+
+  // Period comparison
+  if (/comparar|compara(ção|cao)|vs\.?|versus/i.test(lower)) {
+    const { month1, month2 } = parseComparisonMonths(text);
+    return { action: "period_comparison", params: { month: month1, month2 }, confidence: 0.85, raw: text };
+  }
+
+  // Top spending category
+  if (/qual\s+categoria\s+mais\s+gast|onde\s+mais\s+gast|maior\s+gasto/i.test(lower)) {
+    return { action: "top_spending_category", params: { month: month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}` }, confidence: 0.85, raw: text };
+  }
+
+  // Spending forecast
+  if (/previs(ão|ao)|forecast|projeção|projecao|estimativa.*gasto/i.test(lower)) {
+    return { action: "spending_forecast", params: { month: month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}` }, confidence: 0.85, raw: text };
+  }
+
+  // Daily budget
+  if (/quanto\s+posso\s+gastar|gastar\s+por\s+dia|budget\s+di(á|a)rio/i.test(lower)) {
+    return { action: "daily_budget", params: { month: month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}` }, confidence: 0.85, raw: text };
+  }
+
+  // Filter by amount
+  if (/acima\s+de|maior\s+que|transaç(ões|oes)\s+acima/i.test(lower)) {
+    const minAmount = extractMinAmount(text);
+    return { action: "query_expenses_by_amount", params: { minAmount, month: month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}` }, confidence: 0.85, raw: text };
+  }
+
+  // Average monthly spending
+  if (/m(é|e)dia\s+de\s+gastos|gasto\s+m(é|e)dio|m(é|e)dia\s+mensal/i.test(lower)) {
+    return { action: "average_monthly_spending", params: {}, confidence: 0.85, raw: text };
+  }
+
+  // Export transactions
+  if (/exportar\s+transaç|export\s+/i.test(lower)) {
+    return { action: "export_transactions", params: { month: month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}` }, confidence: 0.8, raw: text };
   }
 
   // Transfer

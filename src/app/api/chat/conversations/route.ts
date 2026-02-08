@@ -8,7 +8,7 @@ export async function GET() {
 
   const conversations = await prisma.chatConversation.findMany({
     where: { tenantId: tenant.tenantId, userId: tenant.userId },
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
     include: { messages: { take: 1, orderBy: { createdAt: "desc" } } },
   });
 

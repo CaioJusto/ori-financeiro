@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageSquare, X, Send, Bot, User, Maximize2, Sparkles } from "lucide-react";
+import { MessageSquare, X, Send, Bot, User, Maximize2, Sparkles, Volume2, VolumeX } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 
@@ -15,6 +15,9 @@ const QUICK_ACTIONS = [
   { label: "💰 Resumo", text: "resumo do mês" },
   { label: "💳 Saldo", text: "qual meu saldo?" },
   { label: "💡 Dica", text: "dica financeira" },
+  { label: "📊 Gastos", text: "quanto gastei esse mês?" },
+  { label: "🔮 Previsão", text: "previsão de gastos pro mês" },
+  { label: "🎯 Metas", text: "como estão minhas metas?" },
 ];
 
 export function ChatWidget() {
@@ -23,8 +26,13 @@ export function ChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [convId, setConvId] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [size, setSize] = useState({ width: 380, height: 520 });
+  const [isResizing, setIsResizing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
   const router = useRouter();
 
   const scrollToBottom = useCallback(() => {
@@ -34,8 +42,39 @@ export function ChatWidget() {
   useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
+    if (open) {
+      inputRef.current?.focus();
+      setUnreadCount(0);
+    }
   }, [open]);
+
+  // Resize handlers
+  useEffect(() => {
+    if (!isResizing) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const { startX, startY, startW, startH } = resizeRef.current;
+      const newW = Math.max(320, Math.min(600, startW - (e.clientX - startX)));
+      const newH = Math.max(400, Math.min(700, startH - (e.clientY - startY)));
+      setSize({ width: newW, height: newH });
+    };
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      resizeRef.current = null;
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizing]);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    resizeRef.current = { startX: e.clientX, startY: e.clientY, startW: size.width, startH: size.height };
+    setIsResizing(true);
+  };
 
   const sendMessage = async (text?: string) => {
     const msg = text || input.trim();
@@ -54,6 +93,7 @@ export function ChatWidget() {
       const data = await res.json();
       if (data.conversationId) setConvId(data.conversationId);
       setMessages(prev => [...prev, data.message]);
+      if (!open) setUnreadCount(prev => prev + 1);
     } catch {
       setMessages(prev => [...prev, { id: `e-${Date.now()}`, role: "ASSISTANT", content: "❌ Erro. Tente novamente." }]);
     } finally {
@@ -69,12 +109,27 @@ export function ChatWidget() {
       >
         <MessageSquare className="w-6 h-6 group-hover:hidden" />
         <Sparkles className="w-6 h-6 hidden group-hover:block" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center animate-in zoom-in duration-200">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[380px] h-[520px] bg-zinc-950 border border-border/40 rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 zoom-in-95 duration-200">
+    <div
+      className="fixed bottom-6 right-6 z-50 bg-zinc-950 border border-border/40 rounded-2xl shadow-2xl shadow-black/40 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 zoom-in-95 duration-200"
+      style={{ width: size.width, height: size.height }}
+    >
+      {/* Resize handle */}
+      <div
+        className="absolute top-0 left-0 w-4 h-4 cursor-nw-resize z-10 hover:bg-violet-500/20 rounded-br-lg transition-colors"
+        onMouseDown={handleResizeStart}
+        title="Redimensionar"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/30 bg-zinc-950">
         <div className="flex items-center gap-2.5">
@@ -89,6 +144,17 @@ export function ChatWidget() {
           </div>
         </div>
         <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className="p-1.5 hover:bg-zinc-800/60 rounded-lg transition-colors"
+            title={soundEnabled ? "Desativar som" : "Ativar som"}
+          >
+            {soundEnabled ? (
+              <Volume2 className="w-3.5 h-3.5 text-violet-400" />
+            ) : (
+              <VolumeX className="w-3.5 h-3.5 text-muted-foreground/60" />
+            )}
+          </button>
           <button
             onClick={() => router.push("/chat")}
             className="p-1.5 hover:bg-zinc-800/60 rounded-lg transition-colors"
@@ -108,7 +174,7 @@ export function ChatWidget() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3">
         {messages.length === 0 && (
-          <div className="text-center space-y-4 py-10">
+          <div className="text-center space-y-4 py-8">
             <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/10 flex items-center justify-center mx-auto">
               <Bot className="w-7 h-7 text-violet-400/70" />
             </div>
@@ -116,8 +182,20 @@ export function ChatWidget() {
               <p className="text-sm font-medium text-zinc-300 mb-1">Como posso ajudar?</p>
               <p className="text-[11px] text-muted-foreground/40">Pergunte sobre suas finanças</p>
             </div>
+            {/* Quick actions grid */}
             <div className="flex flex-wrap gap-1.5 justify-center pt-1">
-              {QUICK_ACTIONS.map(qa => (
+              {QUICK_ACTIONS.slice(0, 3).map(qa => (
+                <button
+                  key={qa.text}
+                  onClick={() => sendMessage(qa.text)}
+                  className="px-3 py-1.5 rounded-full bg-zinc-900/60 border border-border/20 text-[11px] text-zinc-400 hover:text-violet-300 hover:bg-violet-500/15 hover:border-violet-500/25 transition-all duration-150"
+                >
+                  {qa.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-1.5 justify-center">
+              {QUICK_ACTIONS.slice(3, 6).map(qa => (
                 <button
                   key={qa.text}
                   onClick={() => sendMessage(qa.text)}
@@ -138,8 +216,8 @@ export function ChatWidget() {
             )}
             <div className={`max-w-[80%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
               msg.role === "USER"
-                ? "bg-violet-600 text-white rounded-br-md shadow-sm shadow-violet-600/10"
-                : "bg-zinc-800/50 border border-border/20 text-zinc-200 rounded-bl-md"
+                ? "bg-gradient-to-br from-violet-600 to-violet-700 text-white rounded-br-md shadow-sm shadow-violet-600/10"
+                : "bg-gradient-to-br from-zinc-800/60 to-zinc-800/40 border border-border/20 text-zinc-200 rounded-bl-md"
             }`}>
               {msg.role === "USER" ? (
                 <p className="whitespace-pre-wrap">{msg.content}</p>
@@ -178,7 +256,7 @@ export function ChatWidget() {
             ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
+            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) sendMessage(); }}
             placeholder="Pergunte algo..."
             className="flex-1 bg-transparent px-3 py-2.5 text-xs outline-none placeholder:text-muted-foreground/30 text-foreground"
           />
