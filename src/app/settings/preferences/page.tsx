@@ -49,13 +49,11 @@ export default function PreferencesPage() {
       try {
         const r = await fetch(url);
         if (!r.ok) return fallback;
-        const text = await r.text();
-        try {
-          const data = JSON.parse(text);
-          // Ensure we got a valid data object, not an error response
-          if (data && typeof data === "object" && !data.error) return data;
-          return fallback;
-        } catch { return fallback; }
+        const ct = r.headers.get("content-type") || "";
+        if (!ct.includes("application/json")) return fallback;
+        const data = await r.json();
+        if (data && typeof data === "object" && !data.error) return data;
+        return fallback;
       } catch { return fallback; }
     };
     Promise.all([

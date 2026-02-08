@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Trash2, Wallet, Star } from "lucide-react";
+import { Plus, Trash2, Wallet, Star, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
@@ -26,6 +26,8 @@ export default function AccountsPage() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: "", type: "personal", color: "#3b82f6", currency: "BRL" });
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editAccount, setEditAccount] = useState<Account | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", type: "personal", color: "#3b82f6", currency: "BRL" });
 
   useEffect(() => { document.title = "Contas | Ori Financeiro"; }, []);
 
@@ -38,6 +40,20 @@ export default function AccountsPage() {
       setOpen(false); setForm({ name: "", type: "personal", color: "#3b82f6", currency: "BRL" });
       toast.success("Conta criada com sucesso!"); load();
     } catch { toast.error("Erro ao criar conta"); }
+  };
+
+  const startEdit = (a: Account) => {
+    setEditAccount(a);
+    setEditForm({ name: a.name, type: a.type, color: a.color, currency: a.currency });
+  };
+
+  const submitEdit = async () => {
+    if (!editAccount) return;
+    try {
+      await fetch(`/api/accounts/${editAccount.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
+      setEditAccount(null);
+      toast.success("Conta atualizada!"); load();
+    } catch { toast.error("Erro ao atualizar conta"); }
   };
 
   const remove = async () => {
@@ -114,6 +130,9 @@ export default function AccountsPage() {
                       }}>
                         <Star className={`h-4 w-4 ${a.favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}`} />
                       </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Editar conta" onClick={() => startEdit(a)}>
+                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Excluir conta" onClick={() => setDeleteId(a.id)}>
                         <Trash2 className="h-4 w-4 text-muted-foreground" />
                       </Button>
@@ -130,6 +149,30 @@ export default function AccountsPage() {
           ))}
         </div>
       )}
+
+      <Dialog open={!!editAccount} onOpenChange={(o) => !o && setEditAccount(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Conta</DialogTitle><DialogDescription>Altere os dados da conta</DialogDescription></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2"><Label>Nome</Label><Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></div>
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <Select value={editForm.type} onValueChange={(v) => setEditForm({ ...editForm, type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="personal">Pessoal</SelectItem><SelectItem value="business">Empresarial</SelectItem><SelectItem value="savings">Poupança</SelectItem><SelectItem value="investment">Investimento</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Moeda</Label>
+              <Select value={editForm.currency} onValueChange={(v) => setEditForm({ ...editForm, currency: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="BRL">BRL (R$)</SelectItem><SelectItem value="USD">USD ($)</SelectItem><SelectItem value="EUR">EUR (€)</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <Button onClick={submitEdit} className="w-full" disabled={!editForm.name}>Salvar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)} onConfirm={remove} title="Excluir conta?" description="Todas as transações associadas serão excluídas. Esta ação não pode ser desfeita." />
     </PageWrapper>
