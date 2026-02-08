@@ -35,15 +35,26 @@ interface TenantSettings {
 }
 
 export default function PreferencesPage() {
+  const defaultPrefs: Prefs = { defaultDateRange: "30d", numberFormat: "pt-BR", firstDayOfWeek: 0, defaultAccountId: null, notifyBudgetExceeded: true, notifyGoalMilestone: true, notifyRecurringDue: true, notifyLargeTransaction: false, notifyLowBalance: false, notifySpendingSpike: false };
+  const defaultTenant: TenantSettings = { fiscalYearStartMonth: 1, defaultCurrency: "BRL", autoCategorization: true, lowBalanceThreshold: 100, budgetWarningPercent: 80, budgetCriticalPercent: 100, dataRetentionMonths: 60 };
+
   const [prefs, setPrefs] = useState<Prefs | null>(null);
   const [tenantSettings, setTenantSettings] = useState<TenantSettings | null>(null);
   const [accounts, setAccounts] = useState<{ id: string; name: string }[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     document.title = "Preferências | Ori Financeiro";
-    fetch("/api/preferences").then(r => r.json()).then(setPrefs);
-    fetch("/api/tenant-settings").then(r => r.json()).then(setTenantSettings);
-    fetch("/api/accounts").then(r => r.json()).then(setAccounts);
+    Promise.all([
+      fetch("/api/preferences").then(r => r.ok ? r.json() : defaultPrefs).catch(() => defaultPrefs),
+      fetch("/api/tenant-settings").then(r => r.ok ? r.json() : defaultTenant).catch(() => defaultTenant),
+      fetch("/api/accounts").then(r => r.ok ? r.json() : []).catch(() => []),
+    ]).then(([p, t, a]) => {
+      setPrefs(p);
+      setTenantSettings(t);
+      setAccounts(Array.isArray(a) ? a : []);
+      setLoaded(true);
+    });
   }, []);
 
   const savePrefs = async () => {
@@ -56,7 +67,7 @@ export default function PreferencesPage() {
     toast.success("Configurações do sistema salvas!");
   };
 
-  if (!prefs || !tenantSettings) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
+  if (!loaded || !prefs || !tenantSettings) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
 
   return (
     <PageWrapper>

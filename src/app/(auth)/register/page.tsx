@@ -57,9 +57,7 @@ export default function RegisterPage() {
 
       setSuccess(true);
       setLoading(false);
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 2000);
+      window.location.href = "/login";
     } catch (err: any) {
       setError(err.message || "Ocorreu um erro ao criar sua conta. Tente novamente.");
       setLoading(false);
