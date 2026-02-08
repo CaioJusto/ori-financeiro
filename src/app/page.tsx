@@ -131,12 +131,14 @@ export default function Dashboard() {
   const [hasAccounts, setHasAccounts] = useState<boolean | null>(null);
   const [period, setPeriod] = useState("current");
 
-  const loadDashboard = () => {
+  const loadDashboard = async () => {
     const params = period !== "current" ? `?period=${period}` : "";
-    fetch(`/api/dashboard${params}`).then((r) => r.json()).then((d) => {
-      setData(d);
-      setHasAccounts(d.accountBalances && d.accountBalances.length > 0);
-    });
+    const cacheBust = `${params ? "&" : "?"}t=${Date.now()}`;
+    const r = await fetch(`/api/dashboard${params}${cacheBust}`);
+    const d = await r.json();
+    setData(d);
+    const has = !!(d.accountBalances && d.accountBalances.length > 0);
+    setHasAccounts(has);
     fetch("/api/insights").then((r) => r.json()).then(d => setInsights(d));
     fetch("/api/favorites").then((r) => r.json()).then(setFavorites);
     fetch("/api/balance-history?days=30").then((r) => r.json()).then(setBalanceHistory);

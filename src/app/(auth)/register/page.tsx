@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,8 +19,6 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const router = useRouter();
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -59,12 +56,12 @@ export default function RegisterPage() {
       }
 
       setSuccess(true);
+      setLoading(false);
       setTimeout(() => {
-        router.push("/login");
+        window.location.href = "/login";
       }, 2000);
     } catch (err: any) {
       setError(err.message || "Ocorreu um erro ao criar sua conta. Tente novamente.");
-    } finally {
       setLoading(false);
     }
   }

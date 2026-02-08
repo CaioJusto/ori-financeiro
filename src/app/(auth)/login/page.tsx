@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +13,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,12 +28,13 @@ export default function LoginPage() {
 
       if (result?.error) {
         setError("Email ou senha inválidos. Verifique suas credenciais e tente novamente.");
+        setLoading(false);
       } else {
+        // Don't setLoading(false) — we're navigating away
         window.location.href = "/";
       }
     } catch (err) {
       setError("Ocorreu um erro ao fazer login. Tente novamente.");
-    } finally {
       setLoading(false);
     }
   }

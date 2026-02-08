@@ -55,7 +55,16 @@ export default function SimulatorPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ scenario: "save_monthly", amount: 0, months: 12 }),
-    }).then(r => r.json()).then(setResult);
+    }).then(r => {
+      if (!r.ok) throw new Error("API error");
+      return r.json();
+    }).then(setResult).catch(() => {
+      // Set empty result so page still renders
+      setResult({
+        currentBalance: 0, monthlyIncome: 0, monthlyExpense: 0,
+        categories: [], baseline: [], projected: [], savings: 0,
+      });
+    });
   }, []);
 
   const simulate = async () => {
@@ -64,8 +73,13 @@ export default function SimulatorPage() {
     if (scenario === "save_monthly") body.amount = parseFloat(amount);
     if (scenario === "reduce_category") { body.categoryId = categoryId; body.percentage = parseFloat(percentage); }
     if (scenario === "income_increase") body.percentage = parseFloat(percentage);
-    const r = await fetch("/api/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    setResult(await r.json());
+    try {
+      const r = await fetch("/api/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!r.ok) throw new Error("API error");
+      setResult(await r.json());
+    } catch {
+      // keep existing result
+    }
     setLoading(false);
   };
 
