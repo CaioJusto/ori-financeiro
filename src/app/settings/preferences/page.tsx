@@ -45,10 +45,17 @@ export default function PreferencesPage() {
 
   useEffect(() => {
     document.title = "Preferências | Ori Financeiro";
+    const safeJson = async (url: string, fallback: any) => {
+      try {
+        const r = await fetch(url);
+        const text = await r.text();
+        try { return JSON.parse(text); } catch { return fallback; }
+      } catch { return fallback; }
+    };
     Promise.all([
-      fetch("/api/preferences").then(r => r.ok ? r.json() : defaultPrefs).catch(() => defaultPrefs),
-      fetch("/api/tenant-settings").then(r => r.ok ? r.json() : defaultTenant).catch(() => defaultTenant),
-      fetch("/api/accounts").then(r => r.ok ? r.json() : []).catch(() => []),
+      safeJson("/api/preferences", defaultPrefs),
+      safeJson("/api/tenant-settings", defaultTenant),
+      safeJson("/api/accounts", []),
     ]).then(([p, t, a]) => {
       setPrefs(p);
       setTenantSettings(t);
