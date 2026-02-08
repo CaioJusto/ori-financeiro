@@ -211,6 +211,11 @@ export default function RegisterPage() {
                   "Criar conta grátis"
                 )}
               </Button>
+              {loading && (
+                <p className="text-xs text-center text-muted-foreground mt-2 animate-pulse">
+                  Isso pode levar alguns segundos na primeira vez...
+                </p>
+              )}
             </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
