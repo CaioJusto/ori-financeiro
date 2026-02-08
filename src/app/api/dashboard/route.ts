@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/tenant";
 
 const exchangeRates: Record<string, number> = { BRL: 1, USD: 5.0, EUR: 5.5 };
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const { error, tenant } = await requirePermission("dashboard:read");
   if (error) return error;
   const tid = tenant.tenantId;
@@ -27,10 +27,42 @@ export async function GET() {
   });
 
   const totalBalance = accountBalances.reduce((s, a) => s + a.balanceBRL, 0);
-  const totalIncome = transactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const totalExpense = transactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
 
+  // Determine period filter for totals (default: current month)
+  const period = new URL(req.url).searchParams.get("period") || "current";
   const now = new Date();
+  let periodStart: Date;
+  let periodEnd: Date = now;
+  switch (period) {
+    case "last": {
+      const pm = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      const py = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      periodStart = new Date(py, pm, 1);
+      periodEnd = new Date(py, pm + 1, 0, 23, 59, 59);
+      break;
+    }
+    case "last3":
+      periodStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      break;
+    case "last6":
+      periodStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      break;
+    case "year":
+      periodStart = new Date(now.getFullYear(), 0, 1);
+      break;
+    default: // "current"
+      periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+  }
+
+  const periodTransactions = transactions.filter((t) => {
+    const d = new Date(t.date);
+    return d >= periodStart && d <= periodEnd;
+  });
+
+  const totalIncome = periodTransactions.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+  const totalExpense = periodTransactions.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+
   const monthlyData = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);

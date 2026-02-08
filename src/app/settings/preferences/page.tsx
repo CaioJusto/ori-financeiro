@@ -35,7 +35,7 @@ interface TenantSettings {
 }
 
 export default function PreferencesPage() {
-  const defaultPrefs: Prefs = { defaultDateRange: "30d", numberFormat: "pt-BR", firstDayOfWeek: 0, defaultAccountId: null, notifyBudgetExceeded: true, notifyGoalMilestone: true, notifyRecurringDue: true, notifyLargeTransaction: false, notifyLowBalance: false, notifySpendingSpike: false };
+  const defaultPrefs: Prefs = { defaultDateRange: "last30", numberFormat: "pt-BR", firstDayOfWeek: 0, defaultAccountId: null, notifyBudgetExceeded: true, notifyGoalMilestone: true, notifyRecurringDue: true, notifyLargeTransaction: false, notifyLowBalance: false, notifySpendingSpike: false };
   const defaultTenant: TenantSettings = { fiscalYearStartMonth: 1, defaultCurrency: "BRL", autoCategorization: true, lowBalanceThreshold: 100, budgetWarningPercent: 80, budgetCriticalPercent: 100, dataRetentionMonths: 60 };
 
   const [prefs, setPrefs] = useState<Prefs | null>(null);
@@ -48,8 +48,14 @@ export default function PreferencesPage() {
     const safeJson = async (url: string, fallback: any) => {
       try {
         const r = await fetch(url);
+        if (!r.ok) return fallback;
         const text = await r.text();
-        try { return JSON.parse(text); } catch { return fallback; }
+        try {
+          const data = JSON.parse(text);
+          // Ensure we got a valid data object, not an error response
+          if (data && typeof data === "object" && !data.error) return data;
+          return fallback;
+        } catch { return fallback; }
       } catch { return fallback; }
     };
     Promise.all([
