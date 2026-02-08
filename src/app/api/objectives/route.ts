@@ -13,13 +13,21 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const { error, tenant } = await requirePermission("objectives:write");
   if (error) return error;
-  const body = await req.json();
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
+  if (!body || Object.keys(body).length === 0) {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
   const objective = await prisma.objective.create({
     data: {
       name: body.name,
       description: body.description || null,
-      targetDate: new Date(body.targetDate),
-      targetAmount: parseFloat(body.targetAmount),
+      targetDate: body.targetDate ? new Date(body.targetDate) : new Date(Date.now() + 365 * 86400000),
+      targetAmount: parseFloat(body.targetAmount || body.targetValue || 0),
       priority: body.priority || "medium",
       status: body.status || "active",
       milestones: JSON.stringify(body.milestones || []),

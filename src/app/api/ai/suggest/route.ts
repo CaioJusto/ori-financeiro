@@ -2,6 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/tenant";
 
+export async function POST(req: NextRequest) {
+  return GET(req);
+}
+
 export async function GET(req: NextRequest) {
   const { error, tenant } = await requirePermission("transactions.view");
   if (error) return error;

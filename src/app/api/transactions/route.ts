@@ -56,7 +56,15 @@ export async function POST(req: NextRequest) {
   const { error, tenant } = await requirePermission("transactions:write");
   if (error) return error;
 
-  const body = await req.json();
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
+  if (!body || Object.keys(body).length === 0) {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
   if (!body.description || !body.amount || !body.type || !body.date || !body.accountId || !body.categoryId) {
     return NextResponse.json({ error: "description, amount, type, date, accountId, and categoryId are required" }, { status: 400 });
   }

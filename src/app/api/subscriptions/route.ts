@@ -17,7 +17,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { error, tenant } = await requirePermission("subscriptions:write");
   if (error) return error;
-  const body = await req.json();
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
+  if (!body || Object.keys(body).length === 0) {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
   const subscription = await prisma.subscription.create({
     data: {
       name: body.name,
@@ -25,7 +33,7 @@ export async function POST(req: NextRequest) {
       amount: parseFloat(body.amount),
       currency: body.currency || "BRL",
       billingCycle: body.billingCycle || "MONTHLY",
-      nextBillingDate: new Date(body.nextBillingDate),
+      nextBillingDate: body.nextBillingDate ? new Date(body.nextBillingDate) : new Date(),
       category: body.category || "",
       status: body.status || "ACTIVE",
       startDate: body.startDate ? new Date(body.startDate) : new Date(),

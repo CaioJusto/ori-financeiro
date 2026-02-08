@@ -15,9 +15,30 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const tenantId = (session.user as any).tenantId;
-  const data = await req.json();
+  let data: any;
+  try {
+    data = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
+  if (!data || Object.keys(data).length === 0) {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
+  const principal = parseFloat(data.principal || data.amount || 0);
   const loan = await prisma.loan.create({
-    data: { ...data, startDate: new Date(data.startDate), endDate: data.endDate ? new Date(data.endDate) : null, tenantId },
+    data: {
+      name: data.name || "Loan",
+      type: data.type || "OTHER",
+      principal,
+      interestRate: parseFloat(data.interestRate || 0),
+      monthlyPayment: parseFloat(data.monthlyPayment || 0),
+      totalPaid: parseFloat(data.totalPaid || 0),
+      remainingBalance: parseFloat(data.remainingBalance || principal),
+      startDate: new Date(data.startDate || new Date()),
+      endDate: data.endDate ? new Date(data.endDate) : null,
+      status: data.status || "ACTIVE",
+      tenantId,
+    },
   });
   return NextResponse.json(loan);
 }

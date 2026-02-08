@@ -16,7 +16,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (error) return error;
   const { id } = await params;
   const body = await req.json();
-  const account = await prisma.account.update({ where: { id, tenantId: tenant.tenantId }, data: body });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { balance, transactions, transfersFrom, transfersTo, id: _id, tenantId: _tid, createdAt, ...data } = body;
+  const account = await prisma.account.update({ where: { id, tenantId: tenant.tenantId }, data });
   return NextResponse.json(account);
 }
 

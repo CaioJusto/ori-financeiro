@@ -12,7 +12,15 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const { error, tenant } = await requirePermission("goals:write");
   if (error) return error;
-  const body = await req.json();
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
+  if (!body || Object.keys(body).length === 0) {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
   const goal = await prisma.savingsGoal.create({
     data: {
       name: body.name, targetAmount: parseFloat(body.targetAmount),

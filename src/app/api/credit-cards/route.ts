@@ -22,13 +22,21 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const { error, tenant } = await requirePermission("credit-cards:write");
   if (error) return error;
-  const body = await req.json();
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
+  if (!body || Object.keys(body).length === 0) {
+    return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+  }
   const card = await prisma.creditCard.create({
     data: {
       name: body.name,
-      cardLimit: parseFloat(body.cardLimit),
-      closingDay: parseInt(body.closingDay),
-      dueDay: parseInt(body.dueDay),
+      cardLimit: parseFloat(body.cardLimit || body.limit || 0),
+      closingDay: parseInt(body.closingDay || body.closingDay || 1),
+      dueDay: parseInt(body.dueDay || body.dueDay || 10),
       color: body.color || "#8b5cf6",
       tenantId: tenant.tenantId,
     },
