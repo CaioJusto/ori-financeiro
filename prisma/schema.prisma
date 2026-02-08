@@ -1089,6 +1089,18 @@ model ChatMessage {
   @@index([conversationId])
 }
 
+model InviteCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  createdBy String
+  usedBy    String?
+  usedAt    DateTime?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  @@index([code])
+}
+
 model FinancialSnapshot {
   id              String   @id @default(cuid())
   tenantId        String

@@ -51,10 +51,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const tenantName = body.tenantName || body.companyName;
     const adminName = body.adminName || body.name;
-    const { email, password } = body;
+    const { email, password, inviteCode } = body;
 
-    if (!tenantName || !adminName || !email || !password) {
+    if (!tenantName || !adminName || !email || !password || !inviteCode) {
       return NextResponse.json({ error: "Todos os campos são obrigatórios" }, { status: 400 });
+    }
+
+    // Validate invite code
+    const invite = await prisma.inviteCode.findUnique({ where: { code: inviteCode } });
+    if (!invite) {
+      return NextResponse.json({ error: "Código de convite inválido" }, { status: 400 });
+    }
+    if (!invite.active) {
+      return NextResponse.json({ error: "Código de convite desativado" }, { status: 400 });
+    }
+    if (invite.usedBy) {
+      return NextResponse.json({ error: "Código de convite já utilizado" }, { status: 400 });
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -83,6 +95,12 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: { email, name: adminName, passwordHash, roleId: ownerRole.id, tenantId: tenant.id },
+    });
+
+    // Mark invite code as used
+    await prisma.inviteCode.update({
+      where: { code: inviteCode },
+      data: { usedBy: user.id, usedAt: new Date() },
     });
 
     await prisma.userPreference.create({ data: { userId: user.id, tenantId: tenant.id } });

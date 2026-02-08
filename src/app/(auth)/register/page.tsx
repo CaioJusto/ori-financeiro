@@ -15,6 +15,7 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
     companyName: "",
+    inviteCode: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -47,6 +48,7 @@ export default function RegisterPage() {
           email: formData.email,
           password: formData.password,
           companyName: formData.companyName || formData.name,
+          inviteCode: formData.inviteCode,
         }),
       });
 
@@ -159,6 +161,19 @@ export default function RegisterPage() {
                 <p className="text-xs text-muted-foreground">
                   Deixe em branco para usar seu nome
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="inviteCode">Código de Convite</Label>
+                <Input
+                  id="inviteCode"
+                  type="text"
+                  placeholder="Digite seu código de convite"
+                  value={formData.inviteCode}
+                  onChange={(e) => setFormData({ ...formData, inviteCode: e.target.value.toUpperCase() })}
+                  required
+                  disabled={loading}
+                />
               </div>
 
               <div className="space-y-2">

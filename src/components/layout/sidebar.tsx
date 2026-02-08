@@ -9,7 +9,7 @@ import {
   CreditCard, Upload, DollarSign, Search, User, Menu, X, Calendar,
   Bell, Maximize2, Minimize2, ClipboardList, Receipt, Settings, Palette,
   Wand2, TrendingUp, Users, Heart, ArrowUpDown, Flag, History, Share2, Calculator,
-  ShieldCheck, Activity, FileText, MessageSquare, FolderOpen, Sliders,
+  ShieldCheck, Activity, FileText, MessageSquare, FolderOpen, Sliders, Ticket,
   FileBarChart2, BarChart3, Landmark, Columns3, BookOpen, CheckSquare, Banknote, Lightbulb,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -88,7 +88,7 @@ const sections = [
       { href: "/approvals", label: "Aprovações", icon: CheckSquare },
       { href: "/splits", label: "Divisão Despesas", icon: Users },
       { href: "/widgets", label: "Mini-Apps", icon: Calculator },
-      { href: "/settings/billing", label: "Billing & Planos", icon: CreditCard },
+      { href: "/settings/invite-codes", label: "Códigos de Convite", icon: Ticket },
       { href: "/settings/security", label: "Segurança", icon: ShieldCheck },
       { href: "/tips", label: "Dicas Financeiras", icon: Lightbulb },
       { href: "/settings/mcp", label: "MCP Server", icon: Activity },
