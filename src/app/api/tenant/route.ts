@@ -11,7 +11,7 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const { error, tenant } = await requirePermission("*");
+  const { error, tenant } = await requirePermission("dashboard:read");
   if (error) return error;
   const body = await req.json();
 
