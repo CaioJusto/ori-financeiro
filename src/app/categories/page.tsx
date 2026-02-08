@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Trash2, Tag, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Tag, ChevronRight, ChevronDown, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/empty-state";
@@ -21,7 +21,7 @@ interface Category {
   children?: Category[];
 }
 
-function CategoryTree({ categories, onDelete, level = 0 }: { categories: Category[]; onDelete: (id: string) => void; level?: number }) {
+function CategoryTree({ categories, onDelete, onEdit, level = 0 }: { categories: Category[]; onDelete: (id: string) => void; onEdit: (c: Category) => void; level?: number }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const toggle = (id: string) => {
@@ -55,12 +55,17 @@ function CategoryTree({ categories, onDelete, level = 0 }: { categories: Categor
                 <span className="text-sm">{c.name}</span>
                 {c.parentId && <Badge variant="secondary" className="text-[10px] ml-1">sub</Badge>}
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(c.id)}>
-                <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
+              <div className="flex items-center gap-0.5">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(c)}>
+                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onDelete(c.id)}>
+                  <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </div>
             </div>
             {hasChildren && isExpanded && (
-              <CategoryTree categories={c.children!} onDelete={onDelete} level={level + 1} />
+              <CategoryTree categories={c.children!} onDelete={onDelete} onEdit={onEdit} level={level + 1} />
             )}
           </div>
         );
@@ -75,6 +80,8 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: "", type: "expense", color: "#6b7280", parentId: "" });
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editCat, setEditCat] = useState<Category | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", color: "#6b7280" });
 
   useEffect(() => { document.title = "Categorias | Ori Financeiro"; }, []);
 
@@ -90,6 +97,20 @@ export default function CategoriesPage() {
       setOpen(false); setForm({ name: "", type: "expense", color: "#6b7280", parentId: "" });
       toast.success("Categoria criada!"); load();
     } catch { toast.error("Erro ao criar categoria"); }
+  };
+
+  const startEdit = (c: Category) => {
+    setEditCat(c);
+    setEditForm({ name: c.name, color: c.color });
+  };
+
+  const submitEdit = async () => {
+    if (!editCat) return;
+    try {
+      await fetch(`/api/categories/${editCat.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editForm) });
+      setEditCat(null);
+      toast.success("Categoria atualizada!"); load();
+    } catch { toast.error("Erro ao atualizar categoria"); }
   };
 
   const remove = async () => {
@@ -164,7 +185,7 @@ export default function CategoriesPage() {
                 {incomeRoots.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma categoria de receita</p>
                 ) : (
-                  <CategoryTree categories={incomeRoots} onDelete={setDeleteId} />
+                  <CategoryTree categories={incomeRoots} onDelete={setDeleteId} onEdit={startEdit} />
                 )}
               </CardContent>
             </Card>
@@ -176,13 +197,30 @@ export default function CategoriesPage() {
                 {expenseRoots.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma categoria de despesa</p>
                 ) : (
-                  <CategoryTree categories={expenseRoots} onDelete={setDeleteId} />
+                  <CategoryTree categories={expenseRoots} onDelete={setDeleteId} onEdit={startEdit} />
                 )}
               </CardContent>
             </Card>
           </AnimatedItem>
         </div>
       )}
+
+      <Dialog open={!!editCat} onOpenChange={(o) => !o && setEditCat(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Categoria</DialogTitle><DialogDescription>Altere os dados da categoria</DialogDescription></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2"><Label>Nome</Label><Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></div>
+            <div className="space-y-2">
+              <Label>Cor</Label>
+              <div className="flex items-center gap-3">
+                <input type="color" value={editForm.color} onChange={(e) => setEditForm({ ...editForm, color: e.target.value })} className="w-10 h-10 rounded cursor-pointer border-0" />
+                <span className="text-sm text-muted-foreground">{editForm.color}</span>
+              </div>
+            </div>
+            <Button onClick={submitEdit} className="w-full" disabled={!editForm.name}>Salvar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)} onConfirm={remove} />
     </PageWrapper>
