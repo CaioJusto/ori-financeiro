@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, ArrowLeftRight, LayoutDashboard, Sparkles } from "lucide-react";
 
 const steps = [
@@ -63,47 +62,36 @@ export function Onboarding() {
   const Icon = current.icon;
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      >
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: -20 }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="bg-background border rounded-xl shadow-2xl max-w-md w-full mx-4 p-8"
-        >
-          <div className="flex flex-col items-center text-center space-y-6">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: `${current.color}20` }}>
-              <Icon className="h-8 w-8" style={{ color: current.color }} />
-            </div>
-
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold">{current.title}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{current.description}</p>
-            </div>
-
-            {/* Step indicators */}
-            <div className="flex gap-2">
-              {steps.map((_, i) => (
-                <div key={i} className={`h-1.5 rounded-full transition-all ${i === step ? "w-8 bg-primary" : "w-1.5 bg-muted"}`} />
-              ))}
-            </div>
-
-            <div className="flex gap-3 w-full">
-              <Button variant="ghost" size="sm" onClick={finish} className="flex-1">Pular</Button>
-              <Button size="sm" onClick={next} className="flex-1">
-                {step < steps.length - 1 ? "Próximo" : "Começar!"}
-              </Button>
-            </div>
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) finish(); }}
+    >
+      <div className="bg-background border rounded-xl shadow-2xl max-w-md w-full mx-4 p-8">
+        <div className="flex flex-col items-center text-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ backgroundColor: `${current.color}20` }}>
+            <Icon className="h-8 w-8" style={{ color: current.color }} />
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">{current.title}</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">{current.description}</p>
+          </div>
+
+          {/* Step indicators */}
+          <div className="flex gap-2">
+            {steps.map((_, i) => (
+              <div key={i} className={`h-1.5 rounded-full transition-all ${i === step ? "w-8 bg-primary" : "w-1.5 bg-muted"}`} />
+            ))}
+          </div>
+
+          <div className="flex gap-3 w-full">
+            <Button variant="ghost" size="sm" onClick={finish} className="flex-1">Pular</Button>
+            <Button size="sm" onClick={next} className="flex-1">
+              {step < steps.length - 1 ? "Próximo" : "Começar!"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
