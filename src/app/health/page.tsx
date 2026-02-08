@@ -162,7 +162,7 @@ export default function HealthPage() {
 
       {/* Summary */}
       <AnimatedItem>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card>
             <CardContent className="pt-6 text-center">
               <p className="text-sm text-muted-foreground">Receita do Mês</p>

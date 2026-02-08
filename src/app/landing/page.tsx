@@ -115,7 +115,7 @@ export default function LandingPage() {
       <section className="pb-20 px-4">
         <AnimatedSection className="max-w-5xl mx-auto">
           <div className="rounded-xl border bg-gradient-to-br from-primary/5 to-primary/10 p-8 md:p-12">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { label: "Receitas", value: "R$ 85.000", color: "text-green-500" },
                 { label: "Despesas", value: "R$ 52.300", color: "text-red-500" },
@@ -127,7 +127,7 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <div className="mt-6 grid grid-cols-6 gap-2">
+            <div className="mt-6 grid grid-cols-3 sm:grid-cols-6 gap-2">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="rounded bg-primary/20 h-16 md:h-24" style={{ height: `${40 + Math.random() * 60}%`, minHeight: 40 }} />
               ))}

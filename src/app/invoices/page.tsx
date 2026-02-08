@@ -131,7 +131,7 @@ export default function InvoicesPage() {
       <AnimatedItem>
         <Card>
           <CardContent className="p-0">
-            <Table>
+            <div className="overflow-x-auto"><Table>
               <TableHeader><TableRow>
                 <TableHead>Nº</TableHead><TableHead>Cliente</TableHead><TableHead>Total</TableHead>
                 <TableHead>Status</TableHead><TableHead>Vencimento</TableHead><TableHead>Ações</TableHead>
@@ -157,7 +157,7 @@ export default function InvoicesPage() {
                 ))}
                 {invoices.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma fatura encontrada</TableCell></TableRow>}
               </TableBody>
-            </Table>
+            </Table></div>
           </CardContent>
         </Card>
       </AnimatedItem>

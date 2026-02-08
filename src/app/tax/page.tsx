@@ -149,7 +149,7 @@ export default function TaxPage() {
             </Dialog>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
+            <div className="overflow-x-auto"><Table>
               <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Tipo</TableHead><TableHead>Descrição</TableHead><TableHead></TableHead></TableRow></TableHeader>
               <TableBody>
                 {summary?.taxCategories?.map(cat => (
@@ -162,7 +162,7 @@ export default function TaxPage() {
                 ))}
                 {(!summary?.taxCategories || summary.taxCategories.length === 0) && <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Nenhuma categoria fiscal</TableCell></TableRow>}
               </TableBody>
-            </Table>
+            </Table></div>
           </CardContent>
         </Card>
       </AnimatedItem>

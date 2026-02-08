@@ -124,7 +124,7 @@ export default function RulesPage() {
             ) : rules.length === 0 ? (
               <EmptyState icon={Wand2} title="Nenhuma regra" description="Crie regras para auto-categorizar suas transações" actionLabel="Nova Regra" onAction={() => setOpen(true)} />
             ) : (
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Padrão</TableHead>
@@ -148,7 +148,7 @@ export default function RulesPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table></div>
             )}
           </CardContent>
         </Card>

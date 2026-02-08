@@ -135,7 +135,7 @@ export default function PlanningPage() {
       {/* Table */}
       <AnimatedItem>
         <Card><CardContent className="p-0">
-          <Table>
+          <div className="overflow-x-auto"><Table>
             <TableHeader><TableRow>
               <TableHead>Categoria</TableHead><TableHead className="text-right">Planejado</TableHead><TableHead className="text-right">Realizado</TableHead><TableHead className="text-right">Diferença</TableHead><TableHead className="w-20"></TableHead>
             </TableRow></TableHeader>
@@ -160,7 +160,7 @@ export default function PlanningPage() {
               })}
               {plannings.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum plano para este mês</TableCell></TableRow>}
             </TableBody>
-          </Table>
+          </Table></div>
         </CardContent></Card>
       </AnimatedItem>
     </PageWrapper>

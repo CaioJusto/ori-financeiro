@@ -131,7 +131,7 @@ export default function PayablesPage() {
 
       <AnimatedItem>
         <Card><CardContent className="p-0">
-          <Table>
+          <div className="overflow-x-auto"><Table>
             <TableHeader><TableRow>
               <TableHead>Descrição</TableHead><TableHead>Tipo</TableHead><TableHead>Vencimento</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="w-28"></TableHead>
             </TableRow></TableHeader>
@@ -166,7 +166,7 @@ export default function PayablesPage() {
               })}
               {payables.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma conta encontrada</TableCell></TableRow>}
             </TableBody>
-          </Table>
+          </Table></div>
         </CardContent></Card>
       </AnimatedItem>
 

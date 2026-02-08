@@ -118,7 +118,7 @@ export default function LoansPage() {
                       </div>
                       <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); handleDelete(loan.id); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                    <div className="grid grid-cols-4 gap-4 text-sm mb-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-2">
                       <div><span className="text-muted-foreground">Principal:</span> {formatCurrency(loan.principal)}</div>
                       <div><span className="text-muted-foreground">Saldo:</span> {formatCurrency(loan.remainingBalance)}</div>
                       <div><span className="text-muted-foreground">Parcela:</span> {formatCurrency(loan.monthlyPayment)}</div>
@@ -144,14 +144,14 @@ export default function LoansPage() {
                 <TabsList><TabsTrigger value="schedule">Tabela</TabsTrigger><TabsTrigger value="payoff">Estratégia de Quitação</TabsTrigger></TabsList>
                 <TabsContent value="schedule">
                   <div className="max-h-96 overflow-auto">
-                    <Table>
+                    <div className="overflow-x-auto"><Table>
                       <TableHeader><TableRow><TableHead>Mês</TableHead><TableHead className="text-right">Parcela</TableHead><TableHead className="text-right">Principal</TableHead><TableHead className="text-right">Juros</TableHead><TableHead className="text-right">Saldo</TableHead></TableRow></TableHeader>
                       <TableBody>
                         {amortization.slice(0, 60).map(a => (
                           <TableRow key={a.month}><TableCell>{a.month}</TableCell><TableCell className="text-right">{formatCurrency(a.payment)}</TableCell><TableCell className="text-right text-green-600">{formatCurrency(a.principal)}</TableCell><TableCell className="text-right text-red-600">{formatCurrency(a.interest)}</TableCell><TableCell className="text-right">{formatCurrency(a.balance)}</TableCell></TableRow>
                         ))}
                       </TableBody>
-                    </Table>
+                    </Table></div>
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">Total de juros: {formatCurrency(totalInterestNormal)} | Prazo: {amortization.length} meses</p>
                 </TabsContent>

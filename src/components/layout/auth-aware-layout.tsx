@@ -26,7 +26,7 @@ export function AuthAwareLayout({ children }: { children: React.ReactNode }) {
         <Sidebar />
         <CommandPaletteWrapper />
         <main id="main-content" className="flex-1 md:ml-[240px] min-h-screen" role="main">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-6 md:pt-6 sm:py-8">
             <BreadcrumbsWrapper />
             {children}
           </div>

@@ -132,7 +132,7 @@ export default function ComparePage() {
             <Card>
               <CardHeader><CardTitle className="text-sm font-medium">Variação</CardTitle></CardHeader>
               <CardContent>
-                <Table>
+                <div className="overflow-x-auto"><Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-xs">Métrica</TableHead>
@@ -162,7 +162,7 @@ export default function ComparePage() {
                       );
                     })}
                   </TableBody>
-                </Table>
+                </Table></div>
               </CardContent>
             </Card>
           </AnimatedItem>

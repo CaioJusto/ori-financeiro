@@ -115,9 +115,9 @@ export default function SettingsPage() {
 
       <AnimatedItem>
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="profile" className="flex items-center gap-1.5"><User className="h-3.5 w-3.5" />Perfil</TabsTrigger>
-            <TabsTrigger value="preferences" className="flex items-center gap-1.5"><Globe className="h-3.5 w-3.5" />Preferências</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+            <TabsTrigger value="profile" className="flex items-center gap-1.5"><User className="h-3.5 w-3.5" /><span className="hidden sm:inline">Perfil</span><span className="sm:hidden">Perfil</span></TabsTrigger>
+            <TabsTrigger value="preferences" className="flex items-center gap-1.5"><Globe className="h-3.5 w-3.5" /><span className="hidden sm:inline">Preferências</span><span className="sm:hidden">Prefs</span></TabsTrigger>
             <TabsTrigger value="data" className="flex items-center gap-1.5"><Database className="h-3.5 w-3.5" />Dados</TabsTrigger>
             <TabsTrigger value="about" className="flex items-center gap-1.5"><Info className="h-3.5 w-3.5" />Sobre</TabsTrigger>
           </TabsList>

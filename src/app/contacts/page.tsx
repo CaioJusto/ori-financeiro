@@ -95,7 +95,7 @@ export default function ContactsPage() {
             ) : contacts.length === 0 ? (
               <EmptyState icon={Users} title="Nenhum contato" description="Adicione contatos para associar às transações" actionLabel="Novo Contato" onAction={() => setOpen(true)} />
             ) : (
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
@@ -123,7 +123,7 @@ export default function ContactsPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table></div>
             )}
           </CardContent>
         </Card>
@@ -142,7 +142,7 @@ export default function ContactsPage() {
               {viewContact.transactions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma transação associada</p>
               ) : (
-                <Table>
+                <div className="overflow-x-auto"><Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Descrição</TableHead>
@@ -163,7 +163,7 @@ export default function ContactsPage() {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </Table></div>
               )}
             </div>
           )}

@@ -38,7 +38,7 @@ export default function ApprovalsPage() {
 
   return (
     <PageWrapper><AnimatedItem><h1 className="text-2xl font-bold">Aprovações de Despesas</h1><p className="text-muted-foreground mb-6">Gerencie solicitações de aprovação de despesas</p></AnimatedItem>
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <AnimatedItem><Card><CardHeader className="pb-2 flex flex-row items-center justify-between"><CardTitle className="text-sm">Pendentes</CardTitle><Clock className="h-4 w-4 text-yellow-500" /></CardHeader><CardContent><div className="text-2xl font-bold text-yellow-600">{counts.PENDING}</div></CardContent></Card></AnimatedItem>
         <AnimatedItem><Card><CardHeader className="pb-2 flex flex-row items-center justify-between"><CardTitle className="text-sm">Aprovadas</CardTitle><CheckCircle2 className="h-4 w-4 text-green-500" /></CardHeader><CardContent><div className="text-2xl font-bold text-green-600">{counts.APPROVED}</div></CardContent></Card></AnimatedItem>
         <AnimatedItem><Card><CardHeader className="pb-2 flex flex-row items-center justify-between"><CardTitle className="text-sm">Rejeitadas</CardTitle><XCircle className="h-4 w-4 text-red-500" /></CardHeader><CardContent><div className="text-2xl font-bold text-red-600">{counts.REJECTED}</div></CardContent></Card></AnimatedItem>
@@ -50,7 +50,7 @@ export default function ApprovalsPage() {
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList><TabsTrigger value="PENDING">Pendentes</TabsTrigger><TabsTrigger value="APPROVED">Aprovadas</TabsTrigger><TabsTrigger value="REJECTED">Rejeitadas</TabsTrigger></TabsList>
               <TabsContent value={tab}>
-                <Table>
+                <div className="overflow-x-auto"><Table>
                   <TableHeader><TableRow><TableHead>Transação</TableHead><TableHead>Categoria</TableHead><TableHead>Conta</TableHead><TableHead className="text-right">Valor</TableHead><TableHead>Data</TableHead><TableHead>Status</TableHead>{tab === "PENDING" && <TableHead>Ações</TableHead>}</TableRow></TableHeader>
                   <TableBody>
                     {filtered.map(a => (
@@ -74,7 +74,7 @@ export default function ApprovalsPage() {
                     ))}
                     {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma aprovação</TableCell></TableRow>}
                   </TableBody>
-                </Table>
+                </Table></div>
               </TabsContent>
             </Tabs>
           </CardContent>

@@ -132,7 +132,7 @@ export default function InvestmentsPage() {
                         </Select>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div><Label>Quantidade</Label><Input type="number" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} /></div>
                       <div><Label>Preço Médio</Label><Input type="number" value={form.avgPrice} onChange={e => setForm({ ...form, avgPrice: e.target.value })} /></div>
                       <div><Label>Preço Atual</Label><Input type="number" value={form.currentPrice} onChange={e => setForm({ ...form, currentPrice: e.target.value })} /></div>
@@ -143,7 +143,7 @@ export default function InvestmentsPage() {
               </Dialog>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader><TableRow>
                   <TableHead>Ativo</TableHead><TableHead>Tipo</TableHead><TableHead>Qtd</TableHead><TableHead>P. Médio</TableHead>
                   <TableHead>P. Atual</TableHead><TableHead>P/L</TableHead><TableHead></TableHead>
@@ -169,7 +169,7 @@ export default function InvestmentsPage() {
                   ))}
                   {investments.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum investimento</TableCell></TableRow>}
                 </TableBody>
-              </Table>
+              </Table></div>
             </CardContent>
           </Card>
         </div>

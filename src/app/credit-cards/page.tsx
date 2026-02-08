@@ -155,7 +155,7 @@ export default function CreditCardsPage() {
               {invoice.transactions.length === 0 ? (
                 <EmptyState icon={Receipt} title="Fatura vazia" description="Nenhuma transação neste período" />
               ) : (
-                <Table>
+                <div className="overflow-x-auto"><Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-xs">Descrição</TableHead>
@@ -174,7 +174,7 @@ export default function CreditCardsPage() {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </Table></div>
               )}
             </div>
           ) : (

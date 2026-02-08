@@ -183,7 +183,7 @@ export default function ReportsPage() {
 
       <AnimatedItem>
         <Tabs value={reportTab} onValueChange={setReportTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="general" className="flex items-center gap-1.5"><BarChart3 className="h-3.5 w-3.5" />Geral</TabsTrigger>
             <TabsTrigger value="contacts" className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />Contatos</TabsTrigger>
             <TabsTrigger value="credit-cards" className="flex items-center gap-1.5"><CreditCard className="h-3.5 w-3.5" />Cartões</TabsTrigger>
