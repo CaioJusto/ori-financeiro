@@ -11,6 +11,7 @@ import { KeyboardShortcutsOverlay } from "@/components/keyboard-shortcuts-overla
 import { ChangelogModal } from "@/components/changelog-modal";
 import { QuickActions } from "@/components/quick-actions";
 import { PwaPrompts } from "@/components/pwa-prompts";
+import { ChatWidget } from "@/components/chat-widget";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </main>
             <QuickActions />
             <PwaPrompts />
+            <ChatWidget />
           </div>
         </Providers>
       </body>

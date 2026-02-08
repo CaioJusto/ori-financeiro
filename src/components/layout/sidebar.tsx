@@ -24,6 +24,7 @@ const sections = [
     label: "VISÃO GERAL",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/chat", label: "Chat IA", icon: MessageSquare },
       { href: "/transactions", label: "Transações", icon: ArrowLeftRight },
       { href: "/reports", label: "Relatórios", icon: FileBarChart },
       { href: "/monthly", label: "Resumo Mensal", icon: Calendar },
