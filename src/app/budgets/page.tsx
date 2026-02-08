@@ -73,9 +73,9 @@ export default function BudgetsPage() {
                     <SelectContent>{expenseCats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>Limite mensal</Label><Input type="number" placeholder="0.00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
+                <div className="space-y-2"><Label>Limite mensal</Label><Input type="number" min="0.01" step="0.01" placeholder="0.00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Mês</Label><Input type="month" value={form.month} onChange={(e) => setForm({ ...form, month: e.target.value })} /></div>
-                <Button onClick={submit} className="w-full" disabled={!form.categoryId || !form.amount}>Salvar</Button>
+                <Button onClick={submit} className="w-full" disabled={!form.categoryId || !form.amount || parseFloat(form.amount) <= 0}>Salvar</Button>
               </div>
             </DialogContent>
           </Dialog>
