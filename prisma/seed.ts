@@ -409,6 +409,17 @@ async function main() {
     await prisma.goalComment.create({ data: { goalId: firstGoal.id, userId: user.id, userName: "Admin", text: "Meta de 30% atingida!", tenantId: tid } });
   }
 
+  // Invite codes
+  const inviteCodes = ["ORI2025A", "ORI2025B", "ORI2025C", "ORI2025D", "ORI2025E"];
+  for (const code of inviteCodes) {
+    await prisma.inviteCode.upsert({
+      where: { code },
+      update: {},
+      create: { code, createdBy: user.id },
+    });
+  }
+  console.log("✅ 5 códigos de convite criados:", inviteCodes.join(", "));
+
   console.log("✅ Seed concluído! Login: admin@ori.com / admin123");
 }
 
