@@ -14,30 +14,11 @@ import { Button } from "@/components/ui/button";
 import { WelcomePage } from "@/components/welcome-page";
 import { ActivityFeed } from "@/components/activity-feed";
 import { DashboardWidgets } from "@/components/dashboard-widgets";
-import dynamic from "next/dynamic";
+import { Responsive, useContainerWidth, type LayoutItem, type ResponsiveLayouts as Layouts } from "react-grid-layout";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ResponsiveGrid = Responsive as any;
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-
-interface LayoutItem {
-  i: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  minW?: number;
-  minH?: number;
-}
-type Layouts = { [P: string]: LayoutItem[] };
-
-// Dynamic import to avoid SSR issues with WidthProvider
-const ResponsiveReactGridLayout = dynamic(
-  () =>
-    import("react-grid-layout").then((mod) => {
-      const { Responsive, WidthProvider } = mod;
-      return WidthProvider(Responsive);
-    }),
-  { ssr: false }
-) as any;
 
 interface Insight {
   icon: string;
@@ -172,6 +153,7 @@ export default function Dashboard() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [balanceHistory, setBalanceHistory] = useState<any[]>([]);
   const [customizing, setCustomizing] = useState(false);
+  const { width: gridWidth, containerRef: gridContainerRef } = useContainerWidth({ initialWidth: 1200 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [advMetrics, setAdvMetrics] = useState<any>(null);
   const [hasAccounts, setHasAccounts] = useState<boolean | null>(null);
@@ -203,7 +185,8 @@ export default function Dashboard() {
     }).catch(() => {});
   }, []);
 
-  const onLayoutChange = useCallback((_currentLayout: LayoutItem[], allLayouts: Layouts) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onLayoutChange = useCallback((_currentLayout: any, allLayouts: any) => {
     setLayouts(allLayouts);
     saveLayout(allLayouts, hiddenWidgets);
   }, [hiddenWidgets, saveLayout]);
@@ -722,10 +705,11 @@ export default function Dashboard() {
       )}
 
       {/* Grid Layout */}
-      <div className={`transition-all duration-300 ${customizing ? "bg-muted/30 rounded-xl p-2 -m-2 ring-1 ring-primary/10" : ""}`}>
-        <ResponsiveReactGridLayout
+      <div ref={gridContainerRef} className={`transition-all duration-300 ${customizing ? "bg-muted/30 rounded-xl p-2 -m-2 ring-1 ring-primary/10" : ""}`}>
+        <ResponsiveGrid
           className={`layout ${customizing ? "editing" : ""}`}
           layouts={layouts}
+          width={gridWidth}
           breakpoints={{ lg: 1200, md: 996, sm: 768 }}
           cols={{ lg: 12, md: 10, sm: 6 }}
           rowHeight={30}
@@ -735,7 +719,7 @@ export default function Dashboard() {
           draggableHandle=".drag-handle"
           useCSSTransforms={true}
           compactType="vertical"
-          margin={[16, 16]}
+          margin={[16, 16] as const}
         >
           {visibleWidgets.map((widget) => (
             <div key={widget.id} className={`relative group ${customizing ? "dashboard-widget-editing" : ""}`}>
@@ -761,7 +745,7 @@ export default function Dashboard() {
               </div>
             </div>
           ))}
-        </ResponsiveReactGridLayout>
+        </ResponsiveGrid>
       </div>
     </div>
   );
