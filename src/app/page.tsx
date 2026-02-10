@@ -1,21 +1,35 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { DollarSign, TrendingUp, TrendingDown, Wallet, AlertTriangle, BarChart3, ArrowUpDown, Lightbulb, FileDown, Star, Settings2, GripVertical, Flame, Clock, PiggyBank, Activity, Calendar } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { DollarSign, TrendingUp, TrendingDown, Wallet, AlertTriangle, BarChart3, ArrowUpDown, Lightbulb, FileDown, Star, Settings2, GripVertical, Flame, Clock, PiggyBank, Activity, Calendar, X, Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area, Brush } from "recharts";
 import { DashboardSkeleton } from "@/components/dashboard-skeleton";
-import { PageWrapper, AnimatedItem } from "@/components/page-wrapper";
 import { CountUp } from "@/components/count-up";
 import { Button } from "@/components/ui/button";
 import { WelcomePage } from "@/components/welcome-page";
 import { ActivityFeed } from "@/components/activity-feed";
 import { DashboardWidgets } from "@/components/dashboard-widgets";
+// @ts-expect-error - react-grid-layout CJS/ESM interop
+import { Responsive as ResponsiveGrid, WidthProvider } from "react-grid-layout";
+
+interface LayoutItem {
+  i: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minW?: number;
+  minH?: number;
+}
+type Layouts = { [P: string]: LayoutItem[] };
+const ResponsiveReactGridLayout = WidthProvider(ResponsiveGrid);
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
 interface Insight {
   icon: string;
@@ -92,28 +106,54 @@ const renderLegend = (props: any) => {
   );
 };
 
-const ALL_WIDGETS = [
-  { id: "advancedMetrics", label: "Métricas Avançadas" },
-  { id: "metrics", label: "Cards de Métricas" },
-  { id: "favorites", label: "Favoritos" },
-  { id: "balanceHistory", label: "Evolução do Patrimônio" },
-  { id: "charts", label: "Gráficos" },
-  { id: "insights", label: "Insights" },
-  { id: "comparison", label: "Comparativo / Projeção / Orçamentos" },
-  { id: "accountBalances", label: "Saldos por Conta" },
-  { id: "recentTransactions", label: "Transações Recentes" },
-];
-
-function loadWidgetPrefs(): { order: string[]; hidden: string[] } {
-  try {
-    const saved = localStorage.getItem("ori-dashboard-widgets");
-    if (saved) return JSON.parse(saved);
-  } catch {}
-  return { order: ALL_WIDGETS.map(w => w.id), hidden: [] };
+interface WidgetDef {
+  id: string;
+  label: string;
+  defaultLayout: { w: number; h: number; minW?: number; minH?: number };
 }
 
-function saveWidgetPrefs(prefs: { order: string[]; hidden: string[] }) {
-  localStorage.setItem("ori-dashboard-widgets", JSON.stringify(prefs));
+const ALL_WIDGETS: WidgetDef[] = [
+  { id: "advancedMetrics", label: "Métricas Avançadas", defaultLayout: { w: 12, h: 4, minW: 6, minH: 3 } },
+  { id: "metrics", label: "Cards de Métricas", defaultLayout: { w: 12, h: 5, minW: 6, minH: 4 } },
+  { id: "favorites", label: "Favoritos", defaultLayout: { w: 12, h: 4, minW: 4, minH: 3 } },
+  { id: "balanceHistory", label: "Evolução do Patrimônio", defaultLayout: { w: 12, h: 7, minW: 6, minH: 5 } },
+  { id: "charts", label: "Gráficos", defaultLayout: { w: 12, h: 8, minW: 6, minH: 6 } },
+  { id: "insights", label: "Insights", defaultLayout: { w: 12, h: 6, minW: 4, minH: 4 } },
+  { id: "comparison", label: "Comparativo / Projeção / Orçamentos", defaultLayout: { w: 12, h: 6, minW: 6, minH: 5 } },
+  { id: "accountBalances", label: "Saldos por Conta", defaultLayout: { w: 12, h: 5, minW: 4, minH: 4 } },
+  { id: "dashboardWidgets", label: "Contas, Recorrentes, Metas", defaultLayout: { w: 12, h: 6, minW: 6, minH: 4 } },
+  { id: "activityFeed", label: "Atividade Recente", defaultLayout: { w: 12, h: 6, minW: 4, minH: 4 } },
+  { id: "recentTransactions", label: "Transações Recentes", defaultLayout: { w: 12, h: 7, minW: 6, minH: 5 } },
+];
+
+function buildDefaultLayouts(): Layouts {
+  let y = 0;
+  const lg: LayoutItem[] = ALL_WIDGETS.map((w) => {
+    const item: LayoutItem = { i: w.id, x: 0, y, w: w.defaultLayout.w, h: w.defaultLayout.h, minW: w.defaultLayout.minW, minH: w.defaultLayout.minH };
+    y += w.defaultLayout.h;
+    return item;
+  });
+
+  let yMd = 0;
+  const md: LayoutItem[] = ALL_WIDGETS.map((w) => {
+    const item: LayoutItem = { i: w.id, x: 0, y: yMd, w: Math.min(w.defaultLayout.w, 10), h: w.defaultLayout.h, minW: Math.min(w.defaultLayout.minW || 4, 10), minH: w.defaultLayout.minH };
+    yMd += w.defaultLayout.h;
+    return item;
+  });
+
+  let ySm = 0;
+  const sm: LayoutItem[] = ALL_WIDGETS.map((w) => {
+    const item: LayoutItem = { i: w.id, x: 0, y: ySm, w: 6, h: w.defaultLayout.h, minW: Math.min(w.defaultLayout.minW || 4, 6), minH: w.defaultLayout.minH };
+    ySm += w.defaultLayout.h;
+    return item;
+  });
+
+  return { lg, md, sm };
+}
+
+interface SavedLayout {
+  layouts: Layouts;
+  hiddenWidgets: string[];
 }
 
 export default function Dashboard() {
@@ -123,13 +163,54 @@ export default function Dashboard() {
   const [favorites, setFavorites] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [balanceHistory, setBalanceHistory] = useState<any[]>([]);
-  const [widgetPrefs, setWidgetPrefs] = useState(loadWidgetPrefs);
   const [customizing, setCustomizing] = useState(false);
-  const [dragId, setDragId] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [advMetrics, setAdvMetrics] = useState<any>(null);
   const [hasAccounts, setHasAccounts] = useState<boolean | null>(null);
   const [period, setPeriod] = useState("current");
+  const [layouts, setLayouts] = useState<Layouts>(buildDefaultLayouts);
+  const [hiddenWidgets, setHiddenWidgets] = useState<string[]>([]);
+  const [layoutLoaded, setLayoutLoaded] = useState(false);
+
+  // Load saved layout from API
+  useEffect(() => {
+    fetch("/api/dashboard-layout")
+      .then((r) => r.json())
+      .then((saved: SavedLayout | null) => {
+        if (saved && saved.layouts) {
+          setLayouts(saved.layouts);
+          setHiddenWidgets(saved.hiddenWidgets || []);
+        }
+        setLayoutLoaded(true);
+      })
+      .catch(() => setLayoutLoaded(true));
+  }, []);
+
+  const saveLayout = useCallback((newLayouts: Layouts, newHidden: string[]) => {
+    const payload: SavedLayout = { layouts: newLayouts, hiddenWidgets: newHidden };
+    fetch("/api/dashboard-layout", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }, []);
+
+  const onLayoutChange = useCallback((_currentLayout: LayoutItem[], allLayouts: Layouts) => {
+    setLayouts(allLayouts);
+    saveLayout(allLayouts, hiddenWidgets);
+  }, [hiddenWidgets, saveLayout]);
+
+  const removeWidget = useCallback((id: string) => {
+    const newHidden = [...hiddenWidgets, id];
+    setHiddenWidgets(newHidden);
+    saveLayout(layouts, newHidden);
+  }, [hiddenWidgets, layouts, saveLayout]);
+
+  const addWidget = useCallback((id: string) => {
+    const newHidden = hiddenWidgets.filter((h) => h !== id);
+    setHiddenWidgets(newHidden);
+    saveLayout(layouts, newHidden);
+  }, [hiddenWidgets, layouts, saveLayout]);
 
   const loadDashboard = async () => {
     const params = period !== "current" ? `?period=${period}` : "";
@@ -153,28 +234,11 @@ export default function Dashboard() {
   }, [period]);
 
   const insights = insightsData;
-  const toggleWidget = (id: string) => {
-    const newPrefs = { ...widgetPrefs };
-    if (newPrefs.hidden.includes(id)) newPrefs.hidden = newPrefs.hidden.filter(h => h !== id);
-    else newPrefs.hidden = [...newPrefs.hidden, id];
-    setWidgetPrefs(newPrefs); saveWidgetPrefs(newPrefs);
-  };
 
-  const onDragStart = (id: string) => setDragId(id);
-  const onDragOver = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    if (!dragId || dragId === targetId) return;
-    const order = [...widgetPrefs.order];
-    const fromIdx = order.indexOf(dragId);
-    const toIdx = order.indexOf(targetId);
-    if (fromIdx === -1 || toIdx === -1) return;
-    order.splice(fromIdx, 1);
-    order.splice(toIdx, 0, dragId);
-    const newPrefs = { ...widgetPrefs, order };
-    setWidgetPrefs(newPrefs); saveWidgetPrefs(newPrefs);
-  };
+  const visibleWidgets = useMemo(() => ALL_WIDGETS.filter((w) => !hiddenWidgets.includes(w.id)), [hiddenWidgets]);
+  const removedWidgets = useMemo(() => ALL_WIDGETS.filter((w) => hiddenWidgets.includes(w.id)), [hiddenWidgets]);
 
-  if (!data) return <DashboardSkeleton />;
+  if (!data || !layoutLoaded) return <DashboardSkeleton />;
 
   if (hasAccounts === false) {
     return <WelcomePage onAccountCreated={loadDashboard} />;
@@ -187,70 +251,12 @@ export default function Dashboard() {
     data.comparison.previousMonthIncome - data.comparison.previousMonthExpense
   );
 
-  const isVisible = (id: string) => !widgetPrefs.hidden.includes(id);
-
-  return (
-    <PageWrapper>
-      <AnimatedItem>
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Visão geral das suas finanças</p>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-[180px]">
-                <Calendar className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="current">Este mês</SelectItem>
-                <SelectItem value="last">Mês passado</SelectItem>
-                <SelectItem value="last3">Últimos 3 meses</SelectItem>
-                <SelectItem value="last6">Últimos 6 meses</SelectItem>
-                <SelectItem value="year">Este ano</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" onClick={() => setCustomizing(!customizing)}>
-              <Settings2 className="h-4 w-4 mr-2" />{customizing ? "Fechar" : "Customizar"}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => window.open("/api/export/pdf", "_blank")}>
-              <FileDown className="h-4 w-4 mr-2" />Exportar PDF
-            </Button>
-          </div>
-        </div>
-      </AnimatedItem>
-      <AnimatedItem><Separator /></AnimatedItem>
-
-      {customizing && (
-        <AnimatedItem>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-sm font-medium mb-3">Widgets do Dashboard</p>
-              <p className="text-xs text-muted-foreground mb-3">Arraste para reordenar, toggle para mostrar/ocultar</p>
-              <div className="space-y-2">
-                {widgetPrefs.order.map(id => {
-                  const w = ALL_WIDGETS.find(w => w.id === id);
-                  if (!w) return null;
-                  return (
-                    <div key={id} draggable onDragStart={() => onDragStart(id)} onDragOver={e => onDragOver(e, id)} onDragEnd={() => setDragId(null)}
-                      className="flex items-center gap-3 p-2 rounded-md border bg-card cursor-grab active:cursor-grabbing hover:bg-muted/50">
-                      <GripVertical className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm flex-1">{w.label}</span>
-                      <Switch checked={!widgetPrefs.hidden.includes(id)} onCheckedChange={() => toggleWidget(id)} />
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </AnimatedItem>
-      )}
-
-      {/* Advanced Metrics */}
-      {isVisible("advancedMetrics") && advMetrics && (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <AnimatedItem>
+  const renderWidget = (id: string) => {
+    switch (id) {
+      case "advancedMetrics":
+        if (!advMetrics) return null;
+        return (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 h-full">
             <Card className="border bg-card">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -261,8 +267,6 @@ export default function Dashboard() {
                 <p className="text-xs mt-1 text-muted-foreground">por dia</p>
               </CardContent>
             </Card>
-          </AnimatedItem>
-          <AnimatedItem>
             <Card className="border bg-card">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -273,8 +277,6 @@ export default function Dashboard() {
                 <p className="text-xs mt-1 text-muted-foreground">dias de saldo restante</p>
               </CardContent>
             </Card>
-          </AnimatedItem>
-          <AnimatedItem>
             <Card className="border bg-card">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -287,8 +289,6 @@ export default function Dashboard() {
                 </p>
               </CardContent>
             </Card>
-          </AnimatedItem>
-          <AnimatedItem>
             <Card className="border bg-card">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -305,101 +305,94 @@ export default function Dashboard() {
                 <p className="text-xs mt-1 text-muted-foreground">últimos 6 meses</p>
               </CardContent>
             </Card>
-          </AnimatedItem>
-        </div>
-      )}
+          </div>
+        );
 
-      {/* Metric Cards */}
-      {isVisible("metrics") && <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <AnimatedItem>
-          <Card className="border bg-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Saldo Total</p>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <p className="text-2xl font-bold mt-2"><CountUp value={data.totalBalance} /></p>
-              <div className="flex items-center gap-2 mt-1">
-                <p className={`text-xs ${balanceChange.positive ? "text-emerald-500" : "text-red-500"}`}>
-                  {balanceChange.value} vs mês anterior
+      case "metrics":
+        return (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 h-full">
+            <Card className="border bg-card">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Saldo Total</p>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="text-2xl font-bold mt-2"><CountUp value={data.totalBalance} /></p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className={`text-xs ${balanceChange.positive ? "text-emerald-500" : "text-red-500"}`}>
+                    {balanceChange.value} vs mês anterior
+                  </p>
+                </div>
+                {data.monthlyData.length > 1 && (
+                  <div className="mt-2 h-8">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={data.monthlyData.map(m => ({ v: m.income - m.expense }))}>
+                        <Line type="monotone" dataKey="v" stroke="hsl(256, 77%, 60%)" strokeWidth={1.5} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="border bg-card">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Receitas</p>
+                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                </div>
+                <p className="text-2xl font-bold mt-2"><CountUp value={data.totalIncome} /></p>
+                <p className={`text-xs mt-1 ${incomeChange.positive ? "text-emerald-500" : "text-red-500"}`}>
+                  {incomeChange.value} vs mês anterior
                 </p>
-              </div>
-              {data.monthlyData.length > 1 && (
-                <div className="mt-2 h-8">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.monthlyData.map(m => ({ v: m.income - m.expense }))}>
-                      <Line type="monotone" dataKey="v" stroke="hsl(256, 77%, 60%)" strokeWidth={1.5} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                {data.monthlyData.length > 1 && (
+                  <div className="mt-2 h-8">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={data.monthlyData.map(m => ({ v: m.income }))}>
+                        <Line type="monotone" dataKey="v" stroke="hsl(142, 71%, 45%)" strokeWidth={1.5} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="border bg-card">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Despesas</p>
+                  <TrendingDown className="h-4 w-4 text-red-500" />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </AnimatedItem>
-        <AnimatedItem>
-          <Card className="border bg-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Receitas</p>
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-              </div>
-              <p className="text-2xl font-bold mt-2"><CountUp value={data.totalIncome} /></p>
-              <p className={`text-xs mt-1 ${incomeChange.positive ? "text-emerald-500" : "text-red-500"}`}>
-                {incomeChange.value} vs mês anterior
-              </p>
-              {data.monthlyData.length > 1 && (
-                <div className="mt-2 h-8">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.monthlyData.map(m => ({ v: m.income }))}>
-                      <Line type="monotone" dataKey="v" stroke="hsl(142, 71%, 45%)" strokeWidth={1.5} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <p className="text-2xl font-bold mt-2"><CountUp value={data.totalExpense} /></p>
+                <p className={`text-xs mt-1 ${!expenseChange.positive ? "text-emerald-500" : "text-red-500"}`}>
+                  {expenseChange.value} vs mês anterior
+                </p>
+                {data.monthlyData.length > 1 && (
+                  <div className="mt-2 h-8">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={data.monthlyData.map(m => ({ v: m.expense }))}>
+                        <Line type="monotone" dataKey="v" stroke="hsl(0, 84%, 60%)" strokeWidth={1.5} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="border bg-card">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Contas</p>
+                  <Wallet className="h-4 w-4 text-muted-foreground" />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </AnimatedItem>
-        <AnimatedItem>
-          <Card className="border bg-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Despesas</p>
-                <TrendingDown className="h-4 w-4 text-red-500" />
-              </div>
-              <p className="text-2xl font-bold mt-2"><CountUp value={data.totalExpense} /></p>
-              <p className={`text-xs mt-1 ${!expenseChange.positive ? "text-emerald-500" : "text-red-500"}`}>
-                {expenseChange.value} vs mês anterior
-              </p>
-              {data.monthlyData.length > 1 && (
-                <div className="mt-2 h-8">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.monthlyData.map(m => ({ v: m.expense }))}>
-                      <Line type="monotone" dataKey="v" stroke="hsl(0, 84%, 60%)" strokeWidth={1.5} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </AnimatedItem>
-        <AnimatedItem>
-          <Card className="border bg-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">Contas</p>
-                <Wallet className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <p className="text-2xl font-bold mt-2">{data.accountBalances.length}</p>
-              <p className="text-xs mt-1 text-muted-foreground">contas ativas</p>
-            </CardContent>
-          </Card>
-        </AnimatedItem>
-      </div>}
+                <p className="text-2xl font-bold mt-2">{data.accountBalances.length}</p>
+                <p className="text-xs mt-1 text-muted-foreground">contas ativas</p>
+              </CardContent>
+            </Card>
+          </div>
+        );
 
-      {/* Favorites */}
-      {isVisible("favorites") && favorites && (favorites.accounts?.length > 0 || favorites.transactions?.length > 0 || favorites.categories?.length > 0) && (
-        <AnimatedItem>
-          <Card>
+      case "favorites":
+        if (!favorites || !(favorites.accounts?.length > 0 || favorites.transactions?.length > 0 || favorites.categories?.length > 0)) return null;
+        return (
+          <Card className="h-full overflow-auto">
             <CardHeader>
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
@@ -432,13 +425,12 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-        </AnimatedItem>
-      )}
+        );
 
-      {/* Balance History */}
-      {isVisible("balanceHistory") && balanceHistory.length > 0 && (
-        <AnimatedItem>
-          <Card>
+      case "balanceHistory":
+        if (balanceHistory.length === 0) return null;
+        return (
+          <Card className="h-full overflow-hidden">
             <CardHeader><CardTitle className="text-sm font-medium">Evolução do Patrimônio</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
@@ -460,51 +452,47 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-        </AnimatedItem>
-      )}
+        );
 
-      {/* Charts */}
-      {isVisible("charts") && <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-        <AnimatedItem>
-          <Card>
-            <CardHeader><CardTitle className="text-sm font-medium">Receitas vs Despesas</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={data.monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.1} />
-                  <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.3 }} />
-                  <Bar dataKey="income" name="Receitas" fill="hsl(256, 77%, 60%)" radius={[4, 4, 0, 0]} animationDuration={800} />
-                  <Bar dataKey="expense" name="Despesas" fill="hsl(var(--muted-foreground))" fillOpacity={0.4} radius={[4, 4, 0, 0]} animationDuration={800} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </AnimatedItem>
+      case "charts":
+        return (
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 h-full">
+            <Card>
+              <CardHeader><CardTitle className="text-sm font-medium">Receitas vs Despesas</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={data.monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.1} />
+                    <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.3 }} />
+                    <Bar dataKey="income" name="Receitas" fill="hsl(256, 77%, 60%)" radius={[4, 4, 0, 0]} animationDuration={800} />
+                    <Bar dataKey="expense" name="Despesas" fill="hsl(var(--muted-foreground))" fillOpacity={0.4} radius={[4, 4, 0, 0]} animationDuration={800} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-sm font-medium">Gastos por Categoria</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie data={data.categoryBreakdown} cx="50%" cy="45%" outerRadius={90} innerRadius={55} dataKey="total" nameKey="name" paddingAngle={2} label={false} labelLine={false}>
+                      {data.categoryBreakdown.map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} strokeWidth={0} />))}
+                    </Pie>
+                    <Tooltip content={<PieTooltip />} />
+                    <Legend content={renderLegend} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        );
 
-        <AnimatedItem>
-          <Card>
-            <CardHeader><CardTitle className="text-sm font-medium">Gastos por Categoria</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie data={data.categoryBreakdown} cx="50%" cy="45%" outerRadius={90} innerRadius={55} dataKey="total" nameKey="name" paddingAngle={2} label={false} labelLine={false}>
-                    {data.categoryBreakdown.map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} strokeWidth={0} />))}
-                  </Pie>
-                  <Tooltip content={<PieTooltip />} />
-                  <Legend content={renderLegend} />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </AnimatedItem>
-      </div>}
-
-      {/* Insights */}
-      {isVisible("insights") && insights.length > 0 && (
-        <AnimatedItem>
-          <Card>
+      case "insights":
+        if (insights.length === 0) return null;
+        return (
+          <Card className="h-full overflow-auto">
             <CardHeader>
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Lightbulb className="h-4 w-4 text-amber-500" />
@@ -535,74 +523,67 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-        </AnimatedItem>
-      )}
+        );
 
-      {/* Comparison, Projection, Busted Budgets */}
-      {isVisible("comparison") && <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-        <AnimatedItem>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-muted-foreground">Comparativo Mensal</p>
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Receitas (atual)</span><span className="font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(data.comparison.currentMonthIncome)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Receitas (anterior)</span><span className="text-muted-foreground">{formatCurrency(data.comparison.previousMonthIncome)}</span></div>
-                <Separator />
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Despesas (atual)</span><span className="font-medium text-red-600 dark:text-red-400">{formatCurrency(data.comparison.currentMonthExpense)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Despesas (anterior)</span><span className="text-muted-foreground">{formatCurrency(data.comparison.previousMonthExpense)}</span></div>
-              </div>
-            </CardContent>
-          </Card>
-        </AnimatedItem>
-
-        <AnimatedItem>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-muted-foreground">Projeção do Mês</p>
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Média diária</span><span className="font-medium">{formatCurrency(data.projection.dailyAvgExpense)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Projeção total</span><span className="font-medium text-red-600 dark:text-red-400">{formatCurrency(data.projection.projectedExpense)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Dias restantes</span><span className="font-medium">{data.projection.daysRemaining}</span></div>
-              </div>
-            </CardContent>
-          </Card>
-        </AnimatedItem>
-
-        <AnimatedItem>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-muted-foreground">Orçamentos</p>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              </div>
-              {data.bustedBudgets.length === 0 ? (
-                <div className="flex items-center gap-2"><Badge variant="success">OK</Badge><span className="text-sm text-muted-foreground">Tudo dentro do limite</span></div>
-              ) : (
-                <div className="space-y-2">
-                  {data.bustedBudgets.map((b) => (
-                    <div key={b.id} className="flex justify-between text-sm"><span className="text-muted-foreground">{b.category}</span><Badge variant="danger">{formatCurrency(b.spent)} / {formatCurrency(b.limit)}</Badge></div>
-                  ))}
+      case "comparison":
+        return (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3 h-full">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-muted-foreground">Comparativo Mensal</p>
+                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </AnimatedItem>
-      </div>}
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Receitas (atual)</span><span className="font-medium text-emerald-600 dark:text-emerald-400">{formatCurrency(data.comparison.currentMonthIncome)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Receitas (anterior)</span><span className="text-muted-foreground">{formatCurrency(data.comparison.previousMonthIncome)}</span></div>
+                  <Separator />
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Despesas (atual)</span><span className="font-medium text-red-600 dark:text-red-400">{formatCurrency(data.comparison.currentMonthExpense)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Despesas (anterior)</span><span className="text-muted-foreground">{formatCurrency(data.comparison.previousMonthExpense)}</span></div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-muted-foreground">Projeção do Mês</p>
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Média diária</span><span className="font-medium">{formatCurrency(data.projection.dailyAvgExpense)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Projeção total</span><span className="font-medium text-red-600 dark:text-red-400">{formatCurrency(data.projection.projectedExpense)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">Dias restantes</span><span className="font-medium">{data.projection.daysRemaining}</span></div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-muted-foreground">Orçamentos</p>
+                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                </div>
+                {data.bustedBudgets.length === 0 ? (
+                  <div className="flex items-center gap-2"><Badge variant="success">OK</Badge><span className="text-sm text-muted-foreground">Tudo dentro do limite</span></div>
+                ) : (
+                  <div className="space-y-2">
+                    {data.bustedBudgets.map((b) => (
+                      <div key={b.id} className="flex justify-between text-sm"><span className="text-muted-foreground">{b.category}</span><Badge variant="danger">{formatCurrency(b.spent)} / {formatCurrency(b.limit)}</Badge></div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        );
 
-      {/* Account Balances */}
-      {isVisible("accountBalances") && data.accountBalances.length > 0 && (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {data.accountBalances.map((acc) => {
-            const accHistory = balanceHistory.filter((h: { accountId: string }) => h.accountId === acc.id).map((h: { balance: number }) => ({ v: h.balance }));
-            return (
-              <AnimatedItem key={acc.id}>
-                <Card className="transition-colors hover:border-primary/50">
+      case "accountBalances":
+        if (data.accountBalances.length === 0) return null;
+        return (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 h-full">
+            {data.accountBalances.map((acc) => {
+              const accHistory = balanceHistory.filter((h: { accountId: string }) => h.accountId === acc.id).map((h: { balance: number }) => ({ v: h.balance }));
+              return (
+                <Card key={acc.id} className="transition-colors hover:border-primary/50">
                   <CardContent className="p-6">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: acc.color }} />
@@ -622,54 +603,146 @@ export default function Dashboard() {
                     )}
                   </CardContent>
                 </Card>
-              </AnimatedItem>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        );
 
-      {/* Dashboard Widgets - Payables, Recurring, Goals, Calendar */}
-      <AnimatedItem>
-        <DashboardWidgets />
-      </AnimatedItem>
+      case "dashboardWidgets":
+        return <DashboardWidgets />;
 
-      {/* Activity Feed */}
-      <AnimatedItem>
-        <ActivityFeed limit={8} />
-      </AnimatedItem>
+      case "activityFeed":
+        return <ActivityFeed limit={8} />;
 
-      {/* Recent Transactions */}
-      {isVisible("recentTransactions") && <AnimatedItem>
-        <Card>
-          <CardHeader><CardTitle className="text-sm font-medium">Transações Recentes</CardTitle></CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b border-border/50 hover:bg-transparent">
-                    <TableHead className="text-xs text-muted-foreground font-medium">Descrição</TableHead>
-                    <TableHead className="text-xs text-muted-foreground font-medium">Categoria</TableHead>
-                    <TableHead className="text-xs text-muted-foreground font-medium">Data</TableHead>
-                    <TableHead className="text-xs text-muted-foreground font-medium text-right">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.recentTransactions.map((t) => (
-                    <TableRow key={t.id} className="border-b border-border/50 hover:bg-muted/50">
-                      <TableCell className="text-sm font-medium">{t.description}</TableCell>
-                      <TableCell><Badge variant="secondary" className="text-xs">{t.category.name}</Badge></TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatDate(t.date)}</TableCell>
-                      <TableCell className={`text-sm font-semibold text-right ${t.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                        {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
-                      </TableCell>
+      case "recentTransactions":
+        return (
+          <Card className="h-full overflow-auto">
+            <CardHeader><CardTitle className="text-sm font-medium">Transações Recentes</CardTitle></CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b border-border/50 hover:bg-transparent">
+                      <TableHead className="text-xs text-muted-foreground font-medium">Descrição</TableHead>
+                      <TableHead className="text-xs text-muted-foreground font-medium">Categoria</TableHead>
+                      <TableHead className="text-xs text-muted-foreground font-medium">Data</TableHead>
+                      <TableHead className="text-xs text-muted-foreground font-medium text-right">Valor</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {data.recentTransactions.map((t) => (
+                      <TableRow key={t.id} className="border-b border-border/50 hover:bg-muted/50">
+                        <TableCell className="text-sm font-medium">{t.description}</TableCell>
+                        <TableCell><Badge variant="secondary" className="text-xs">{t.category.name}</Badge></TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{formatDate(t.date)}</TableCell>
+                        <TableCell className={`text-sm font-semibold text-right ${t.type === "income" ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                          {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Visão geral das suas finanças</p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-[180px]">
+              <Calendar className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="current">Este mês</SelectItem>
+              <SelectItem value="last">Mês passado</SelectItem>
+              <SelectItem value="last3">Últimos 3 meses</SelectItem>
+              <SelectItem value="last6">Últimos 6 meses</SelectItem>
+              <SelectItem value="year">Este ano</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant={customizing ? "default" : "outline"} size="sm" onClick={() => setCustomizing(!customizing)}>
+            <Settings2 className="h-4 w-4 mr-2" />{customizing ? "Salvar Layout" : "Customizar"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.open("/api/export/pdf", "_blank")}>
+            <FileDown className="h-4 w-4 mr-2" />Exportar PDF
+          </Button>
+        </div>
+      </div>
+      <Separator />
+
+      {/* Add Widgets Panel (edit mode) */}
+      {customizing && removedWidgets.length > 0 && (
+        <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium mb-3 flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Adicionar Widgets
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              {removedWidgets.map((w) => (
+                <Button key={w.id} variant="outline" size="sm" onClick={() => addWidget(w.id)} className="gap-2">
+                  <Plus className="h-3 w-3" />
+                  {w.label}
+                </Button>
+              ))}
             </div>
           </CardContent>
         </Card>
-      </AnimatedItem>}
-    </PageWrapper>
+      )}
+
+      {/* Grid Layout */}
+      <ResponsiveReactGridLayout
+        className="layout"
+        layouts={layouts}
+        breakpoints={{ lg: 1200, md: 996, sm: 768 }}
+        cols={{ lg: 12, md: 10, sm: 6 }}
+        rowHeight={30}
+        isDraggable={customizing}
+        isResizable={customizing}
+        onLayoutChange={onLayoutChange}
+        draggableHandle=".drag-handle"
+        useCSSTransforms={true}
+        compactType="vertical"
+        margin={[16, 16]}
+      >
+        {visibleWidgets.map((widget) => (
+          <div key={widget.id} className="relative group">
+            {customizing && (
+              <>
+                <div className="drag-handle absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing p-1 rounded bg-muted/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <GripVertical className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <button
+                  onClick={() => removeWidget(widget.id)}
+                  className="absolute top-2 right-2 z-20 p-1 rounded bg-destructive/80 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+                <div className="absolute bottom-0 left-0 right-0 z-10 bg-muted/60 text-center py-0.5 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                  {widget.label}
+                </div>
+              </>
+            )}
+            <div className={`h-full ${customizing ? "ring-1 ring-primary/20 rounded-lg" : ""}`}>
+              {renderWidget(widget.id)}
+            </div>
+          </div>
+        ))}
+      </ResponsiveReactGridLayout>
+    </div>
   );
 }
