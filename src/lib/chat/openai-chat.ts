@@ -19,7 +19,7 @@ export async function getAISettings(tenantId: string) {
     const apiKey = decrypt(settings.aiApiKey);
     return {
       apiKey,
-      model: settings.aiModel || "gpt-4o-mini",
+      model: settings.aiModel || "gpt-4.1-mini",
       systemPrompt: settings.aiSystemPrompt || DEFAULT_SYSTEM_PROMPT,
     };
   } catch {

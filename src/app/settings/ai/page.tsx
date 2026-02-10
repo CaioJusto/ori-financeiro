@@ -13,12 +13,32 @@ import { Bot, Key, Save, Loader2, Zap, Eye, EyeOff, AlertCircle, CheckCircle2, S
 import Link from "next/link";
 import { toast } from "sonner";
 
-const AI_MODELS = [
-  { value: "gpt-4o", label: "GPT-4o", desc: "Mais capaz, mais caro" },
-  { value: "gpt-4o-mini", label: "GPT-4o Mini", desc: "Rápido e econômico (recomendado)" },
-  { value: "gpt-4-turbo", label: "GPT-4 Turbo", desc: "Alta performance" },
-  { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo", desc: "Mais barato" },
-  { value: "o3-mini", label: "O3 Mini", desc: "Modelo de raciocínio" },
+type AIModel = { value: string; label: string; desc: string; price: string };
+type AIModelGroup = { label: string; models: AIModel[] };
+
+const AI_MODEL_GROUPS: AIModelGroup[] = [
+  {
+    label: "⚡ Flagship",
+    models: [
+      { value: "gpt-5.2", label: "GPT-5.2", desc: "Melhor para código e agentes", price: "$1.75 / $14.00" },
+      { value: "gpt-5.2-pro", label: "GPT-5.2 Pro", desc: "Mais inteligente e preciso", price: "$21.00 / $168.00" },
+      { value: "gpt-5-mini", label: "GPT-5 Mini", desc: "Rápido e barato", price: "$0.25 / $2.00" },
+    ],
+  },
+  {
+    label: "🔧 Standard",
+    models: [
+      { value: "gpt-4.1", label: "GPT-4.1", desc: "Uso geral, alta qualidade", price: "$3.00 / $12.00" },
+      { value: "gpt-4.1-mini", label: "GPT-4.1 Mini", desc: "Bom custo-benefício (recomendado)", price: "$0.80 / $3.20" },
+      { value: "o4-mini", label: "O4 Mini", desc: "Modelo de raciocínio", price: "$4.00 / $16.00" },
+    ],
+  },
+  {
+    label: "💰 Economy",
+    models: [
+      { value: "gpt-4.1-nano", label: "GPT-4.1 Nano", desc: "Ultra econômico", price: "$0.20 / $0.80" },
+    ],
+  },
 ];
 
 const DEFAULT_SYSTEM_PROMPT = `Você é o Ori, um assistente financeiro pessoal inteligente. Você ajuda o usuário a gerenciar suas finanças, analisar gastos, acompanhar metas e tomar decisões financeiras melhores. Responda sempre em português brasileiro, de forma clara e objetiva. Use emojis quando apropriado para tornar a conversa mais amigável.`;
@@ -33,7 +53,7 @@ export default function AISettingsPage() {
   const [apiKey, setApiKey] = useState("");
   const [apiKeySet, setApiKeySet] = useState(false);
   const [maskedKey, setMaskedKey] = useState("");
-  const [model, setModel] = useState("gpt-4o-mini");
+  const [model, setModel] = useState("gpt-4.1-mini");
   const [enabled, setEnabled] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState("");
 
@@ -49,7 +69,7 @@ export default function AISettingsPage() {
         const data = await res.json();
         setMaskedKey(data.aiApiKey || "");
         setApiKeySet(data.aiApiKeySet);
-        setModel(data.aiModel || "gpt-4o-mini");
+        setModel(data.aiModel || "gpt-4.1-mini");
         setEnabled(data.aiEnabled);
         setSystemPrompt(data.aiSystemPrompt || "");
       }
@@ -242,18 +262,29 @@ export default function AISettingsPage() {
             </CardHeader>
             <CardContent>
               <Select value={model} onValueChange={setModel}>
-                <SelectTrigger className="bg-zinc-900/60 border-border/40">
-                  <SelectValue />
+                <SelectTrigger className="bg-zinc-900/60 border-border/40 h-auto py-2.5">
+                  <SelectValue placeholder="Selecione um modelo" />
                 </SelectTrigger>
-                <SelectContent>
-                  {AI_MODELS.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{m.label}</span>
-                        <span className="text-[11px] text-muted-foreground/50">— {m.desc}</span>
+                <SelectContent className="max-h-80">
+                  {AI_MODEL_GROUPS.map((group) => (
+                    <div key={group.label}>
+                      <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/50 font-semibold">
+                        {group.label}
                       </div>
-                    </SelectItem>
+                      {group.models.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>
+                          <div className="flex items-center gap-2 w-full">
+                            <span className="font-medium text-sm">{m.label}</span>
+                            <span className="text-[11px] text-muted-foreground/50">— {m.desc}</span>
+                            <span className="ml-auto text-[10px] font-mono text-muted-foreground/40 pl-3">{m.price}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </div>
                   ))}
+                  <div className="px-2 py-1.5 text-[10px] text-muted-foreground/30 border-t border-border/20 mt-1">
+                    Preços por 1M tokens (input / output)
+                  </div>
                 </SelectContent>
               </Select>
             </CardContent>

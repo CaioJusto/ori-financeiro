@@ -879,7 +879,7 @@ model TenantSettings {
   dataRetentionMonths   Int      @default(60)
   approvalThreshold     Float    @default(1000)
   aiApiKey              String?
-  aiModel               String   @default("gpt-4o-mini")
+  aiModel               String   @default("gpt-4.1-mini")
   aiEnabled             Boolean  @default(false)
   aiSystemPrompt        String?
   createdAt             DateTime @default(now())
