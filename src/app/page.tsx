@@ -14,8 +14,9 @@ import { Button } from "@/components/ui/button";
 import { WelcomePage } from "@/components/welcome-page";
 import { ActivityFeed } from "@/components/activity-feed";
 import { DashboardWidgets } from "@/components/dashboard-widgets";
-// @ts-expect-error - react-grid-layout CJS/ESM interop
-import { Responsive as ResponsiveGrid, WidthProvider } from "react-grid-layout";
+import dynamic from "next/dynamic";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
 interface LayoutItem {
   i: string;
@@ -27,9 +28,16 @@ interface LayoutItem {
   minH?: number;
 }
 type Layouts = { [P: string]: LayoutItem[] };
-const ResponsiveReactGridLayout = WidthProvider(ResponsiveGrid);
-import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
+
+// Dynamic import to avoid SSR issues with WidthProvider
+const ResponsiveReactGridLayout = dynamic(
+  () =>
+    import("react-grid-layout").then((mod) => {
+      const { Responsive, WidthProvider } = mod;
+      return WidthProvider(Responsive);
+    }),
+  { ssr: false }
+) as any;
 
 interface Insight {
   icon: string;
