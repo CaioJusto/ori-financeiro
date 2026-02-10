@@ -1,16 +1,17 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, Tag, FileBarChart,
   ArrowRightLeft, Sun, Moon, Target, Repeat, PiggyBank,
   CreditCard, Upload, DollarSign, Search, User, Menu, X, Calendar,
   Bell, Maximize2, Minimize2, ClipboardList, Receipt, Settings, Palette,
-  Wand2, TrendingUp, Users, Heart, ArrowUpDown, Flag, History, Share2, Calculator,
+  Wand2, TrendingUp, Users, Heart, ArrowUpDown, Flag, History, Calculator,
   ShieldCheck, Activity, FileText, MessageSquare, FolderOpen, Sliders, Ticket,
   FileBarChart2, BarChart3, Landmark, Columns3, BookOpen, CheckSquare, Banknote, Lightbulb,
+  ChevronRight,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -19,24 +20,26 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { SIDEBAR_PERMISSIONS } from "@/lib/permissions";
 
-const sections = [
+type SidebarItem = {
+  href: string;
+  label: string;
+  icon: any;
+  children?: SidebarItem[];
+};
+
+type SidebarSection = {
+  label: string;
+  items: SidebarItem[];
+};
+
+const sections: SidebarSection[] = [
   {
-    label: "VISÃO GERAL",
+    label: "PRINCIPAL",
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
       { href: "/chat", label: "Chat IA", icon: MessageSquare },
       { href: "/transactions", label: "Transações", icon: ArrowLeftRight },
-      { href: "/reports", label: "Relatórios", icon: FileBarChart },
-      { href: "/monthly", label: "Resumo Mensal", icon: Calendar },
       { href: "/calendar", label: "Calendário", icon: Calendar },
-      { href: "/compare", label: "Comparativo", icon: ArrowUpDown },
-      { href: "/cashflow", label: "Fluxo de Caixa", icon: TrendingUp },
-      { href: "/planning", label: "Planejamento", icon: ClipboardList },
-      { href: "/analytics", label: "Analytics", icon: Activity },
-      { href: "/reports/income-statement", label: "DRE", icon: FileBarChart2 },
-      { href: "/reports/balance-sheet", label: "Balanço", icon: BarChart3 },
-      { href: "/reports/expense-breakdown", label: "Despesas Detalhe", icon: FileBarChart },
-      { href: "/reports/trend-analysis", label: "Tendências", icon: TrendingUp },
     ],
   },
   {
@@ -49,7 +52,6 @@ const sections = [
       { href: "/credit-cards", label: "Cartões", icon: CreditCard },
       { href: "/investments", label: "Investimentos", icon: Landmark },
       { href: "/subscriptions", label: "Assinaturas", icon: Repeat },
-      { href: "/invoices", label: "Faturas", icon: FileBarChart2 },
       { href: "/loans", label: "Empréstimos", icon: Banknote },
     ],
   },
@@ -58,67 +60,207 @@ const sections = [
     items: [
       { href: "/recurring", label: "Recorrências", icon: Repeat },
       { href: "/goals", label: "Metas", icon: PiggyBank },
-      { href: "/installments", label: "Parcelas", icon: CreditCard },
-      { href: "/payables", label: "Contas a Pagar", icon: Receipt },
+      {
+        href: "/payables", label: "Contas a Pagar", icon: Receipt,
+        children: [
+          { href: "/payables", label: "Kanban", icon: Columns3 },
+          { href: "/invoices", label: "Faturas", icon: FileBarChart2 },
+          { href: "/installments", label: "Parcelas", icon: CreditCard },
+          { href: "/bills", label: "Despesas", icon: Receipt },
+        ],
+      },
       { href: "/tags", label: "Tags", icon: DollarSign },
       { href: "/contacts", label: "Contatos", icon: Users },
       { href: "/rules", label: "Regras Auto", icon: Wand2 },
-      { href: "/projections", label: "Projeções", icon: TrendingUp },
-      { href: "/bills", label: "Kanban Contas", icon: Columns3 },
-      { href: "/tax", label: "Fiscal", icon: Calculator },
-      { href: "/objectives", label: "Objetivos", icon: Flag },
-      { href: "/simulator", label: "Simulador", icon: Calculator },
       { href: "/templates", label: "Templates", icon: FileText },
-      { href: "/health", label: "Saúde Financeira", icon: Heart },
-      { href: "/challenges", label: "Desafios", icon: Target },
       { href: "/documents", label: "Documentos", icon: FolderOpen },
-      { href: "/audit", label: "Auditoria", icon: History },
-      { href: "/notifications", label: "Notificações", icon: Bell },
-      { href: "/import", label: "Importar", icon: Upload },
-      { href: "/settings", label: "Configurações", icon: Settings },
-      { href: "/settings/preferences", label: "Preferências", icon: Sliders },
-      { href: "/settings/currencies", label: "Moedas", icon: DollarSign },
-      { href: "/settings/api-keys", label: "Chaves API", icon: ShieldCheck },
-      { href: "/settings/webhooks", label: "Webhooks", icon: Activity },
-      { href: "/settings/users", label: "Usuários", icon: Users },
-      { href: "/settings/roles", label: "Papéis", icon: ShieldCheck },
-      { href: "/settings/branding", label: "Branding", icon: Palette },
-      { href: "/settings/scheduled-reports", label: "Relatórios Agendados", icon: FileBarChart },
-      { href: "/settings/budget-templates", label: "Templates Orçamento", icon: BookOpen },
-      { href: "/approvals", label: "Aprovações", icon: CheckSquare },
-      { href: "/splits", label: "Divisão Despesas", icon: Users },
-      { href: "/widgets", label: "Mini-Apps", icon: Calculator },
-      { href: "/settings/invite-codes", label: "Códigos de Convite", icon: Ticket },
-      { href: "/settings/security", label: "Segurança", icon: ShieldCheck },
-      { href: "/tips", label: "Dicas Financeiras", icon: Lightbulb },
-      { href: "/settings/mcp", label: "MCP Server", icon: Activity },
-      { href: "/settings/bank-connections", label: "Bancos", icon: Landmark },
-      { href: "/settings/alerts", label: "Alertas", icon: Bell },
-      { href: "/settings/themes", label: "Temas", icon: Palette },
-      { href: "/settings/open-finance", label: "Open Finance", icon: Landmark },
     ],
   },
   {
-    label: "AVANÇADO",
+    label: "ANÁLISES",
     items: [
-      { href: "/benchmark", label: "Benchmarking", icon: BarChart3 },
+      {
+        href: "/reports", label: "Relatórios", icon: FileBarChart,
+        children: [
+          { href: "/reports", label: "Visão Geral", icon: FileBarChart },
+          { href: "/reports/income-statement", label: "DRE", icon: FileBarChart2 },
+          { href: "/reports/balance-sheet", label: "Balanço", icon: BarChart3 },
+          { href: "/reports/expense-breakdown", label: "Despesas Detalhe", icon: FileBarChart },
+          { href: "/reports/trend-analysis", label: "Tendências", icon: TrendingUp },
+          { href: "/monthly", label: "Resumo Mensal", icon: Calendar },
+        ],
+      },
+      { href: "/cashflow", label: "Fluxo de Caixa", icon: TrendingUp },
+      { href: "/analytics", label: "Analytics", icon: Activity },
+      { href: "/compare", label: "Comparativo", icon: ArrowUpDown },
+      { href: "/projections", label: "Projeções", icon: TrendingUp },
       { href: "/forecast", label: "Previsões", icon: TrendingUp },
+      { href: "/benchmark", label: "Benchmarking", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "FERRAMENTAS",
+    items: [
+      { href: "/tax", label: "Fiscal", icon: Calculator },
+      { href: "/simulator", label: "Simulador", icon: Calculator },
+      { href: "/health", label: "Saúde Financeira", icon: Heart },
+      { href: "/challenges", label: "Desafios", icon: Target },
+      { href: "/objectives", label: "Objetivos", icon: Flag },
+      { href: "/planning", label: "Planejamento", icon: ClipboardList },
+      { href: "/splits", label: "Divisão Despesas", icon: Users },
+      { href: "/tips", label: "Dicas", icon: Lightbulb },
+      { href: "/import", label: "Importar", icon: Upload },
+      { href: "/export", label: "Exportar", icon: FileText },
+    ],
+  },
+  {
+    label: "CONFIGURAÇÕES",
+    items: [
+      {
+        href: "/settings", label: "Configurações", icon: Settings,
+        children: [
+          { href: "/settings", label: "Geral", icon: Settings },
+          { href: "/settings/preferences", label: "Preferências", icon: Sliders },
+          { href: "/settings/users", label: "Usuários", icon: Users },
+          { href: "/settings/roles", label: "Papéis", icon: ShieldCheck },
+          { href: "/settings/security", label: "Segurança", icon: ShieldCheck },
+          { href: "/settings/branding", label: "Branding", icon: Palette },
+          { href: "/settings/themes", label: "Temas", icon: Palette },
+          { href: "/settings/currencies", label: "Moedas", icon: DollarSign },
+          { href: "/settings/bank-connections", label: "Bancos", icon: Landmark },
+          { href: "/settings/open-finance", label: "Open Finance", icon: Landmark },
+          { href: "/settings/api-keys", label: "Chaves API", icon: ShieldCheck },
+          { href: "/settings/webhooks", label: "Webhooks", icon: Activity },
+          { href: "/settings/mcp", label: "MCP Server", icon: Activity },
+          { href: "/settings/alerts", label: "Alertas", icon: Bell },
+          { href: "/settings/scheduled-reports", label: "Relatórios Agendados", icon: FileBarChart },
+          { href: "/settings/budget-templates", label: "Templates Orçamento", icon: BookOpen },
+          { href: "/settings/invite-codes", label: "Convites", icon: Ticket },
+        ],
+      },
+      { href: "/audit", label: "Auditoria", icon: History },
+      { href: "/approvals", label: "Aprovações", icon: CheckSquare },
+      { href: "/notifications", label: "Notificações", icon: Bell },
       { href: "/snapshot", label: "Report Card", icon: FileBarChart },
       { href: "/mrr", label: "MRR", icon: DollarSign },
-      { href: "/export", label: "Exportação", icon: FileText },
+      { href: "/widgets", label: "Mini-Apps", icon: Calculator },
     ],
   },
   {
     label: "AJUDA",
     items: [
       { href: "/help", label: "Central de Ajuda", icon: Lightbulb },
-      { href: "/shortcuts", label: "Atalhos de Teclado", icon: FileText },
+      { href: "/shortcuts", label: "Atalhos", icon: FileText },
     ],
   },
 ];
 
 interface NotificationData {
   id: string; title: string; message: string; type: string; read: boolean; createdAt: string;
+}
+
+function CollapsibleItem({ item, pathname, hasPermission, overdueCount }: {
+  item: SidebarItem;
+  pathname: string;
+  hasPermission: (p: string) => boolean;
+  overdueCount: number;
+}) {
+  const isChildActive = item.children?.some(c => pathname === c.href) || false;
+  const [open, setOpen] = useState(isChildActive);
+
+  // Auto-open when child becomes active
+  useEffect(() => {
+    if (isChildActive) setOpen(true);
+  }, [isChildActive]);
+
+  if (!item.children) {
+    const active = pathname === item.href;
+    const requiredPerm = SIDEBAR_PERMISSIONS[item.href];
+    if (requiredPerm && !hasPermission(requiredPerm)) return null;
+
+    return (
+      <Tooltip delayDuration={600}>
+        <TooltipTrigger asChild>
+          <Link
+            href={item.href}
+            className={cn(
+              "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
+              active
+                ? "bg-[hsl(var(--foreground)/0.08)] text-[hsl(var(--sidebar-foreground))] font-medium"
+                : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--foreground)/0.05)] hover:text-[hsl(var(--sidebar-foreground))]"
+            )}
+          >
+            <item.icon className="h-4 w-4 shrink-0" />
+            <span className="flex-1">{item.label}</span>
+            {item.href === "/payables" && overdueCount > 0 && (
+              <span className="w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shrink-0">
+                {overdueCount > 9 ? "9+" : overdueCount}
+              </span>
+            )}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="text-xs hidden md:block">
+          {item.label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  // Collapsible parent
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors w-full",
+          isChildActive
+            ? "text-[hsl(var(--sidebar-foreground))] font-medium"
+            : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--foreground)/0.05)] hover:text-[hsl(var(--sidebar-foreground))]"
+        )}
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        <span className="flex-1 text-left">{item.label}</span>
+        <ChevronRight className={cn(
+          "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+          open && "rotate-90"
+        )} />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="ml-3 pl-3 border-l border-[hsl(var(--foreground)/0.08)] space-y-0.5 py-0.5">
+              {item.children.map(child => {
+                const active = pathname === child.href;
+                const requiredPerm = SIDEBAR_PERMISSIONS[child.href];
+                if (requiredPerm && !hasPermission(requiredPerm)) return null;
+                return (
+                  <Link
+                    key={child.href}
+                    href={child.href}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md px-2 py-1 text-[13px] transition-colors",
+                      active
+                        ? "bg-[hsl(var(--foreground)/0.08)] text-[hsl(var(--sidebar-foreground))] font-medium"
+                        : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--foreground)/0.05)] hover:text-[hsl(var(--sidebar-foreground))]"
+                    )}
+                  >
+                    <child.icon className="h-3.5 w-3.5 shrink-0" />
+                    <span>{child.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 export function Sidebar() {
@@ -134,15 +276,20 @@ export function Sidebar() {
   const [healthScore, setHealthScore] = useState<number | null>(null);
   const [brandName, setBrandName] = useState("Ori Financeiro");
   const [overdueCount, setOverdueCount] = useState(0);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
   const userPermissions = useMemo(() => {
     const perms = (session?.user as any)?.permissions as string[] | undefined;
     return perms || [];
   }, [session]);
 
-  const hasPermission = (permission: string): boolean => {
+  const hasPermission = useCallback((permission: string): boolean => {
     if (userPermissions.includes("*")) return true;
     return userPermissions.includes(permission);
+  }, [userPermissions]);
+
+  const toggleSection = (label: string) => {
+    setCollapsedSections(prev => ({ ...prev, [label]: !prev[label] }));
   };
 
   // Filter sections based on permissions
@@ -151,12 +298,13 @@ export function Sidebar() {
       ...section,
       items: section.items.filter(item => {
         const requiredPerm = SIDEBAR_PERMISSIONS[item.href];
-        if (!requiredPerm) return true; // No permission required
+        if (!requiredPerm) return true;
         return hasPermission(requiredPerm);
       }),
     })).filter(section => section.items.length > 0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userPermissions]);
+  }, [hasPermission]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   // Load saved color theme
   useEffect(() => {
@@ -171,11 +319,9 @@ export function Sidebar() {
     setShowThemeMenu(false);
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const loadNotifications = () => {
-    fetch("/api/notifications").then(r => r.json()).then(setNotifications);
-  };
+  const loadNotifications = useCallback(() => {
+    fetch("/api/notifications").then(r => r.json()).then(setNotifications).catch(() => {});
+  }, []);
 
   const markRead = async (id: string) => {
     await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
@@ -187,27 +333,23 @@ export function Sidebar() {
     loadNotifications();
   };
 
-  // Close on route change
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
-  // Load notifications periodically
   useEffect(() => {
     loadNotifications();
-    fetch("/api/notifications/check", { method: "POST" }).then(() => loadNotifications());
+    fetch("/api/notifications/check", { method: "POST" }).then(() => loadNotifications()).catch(() => {});
     const interval = setInterval(() => {
-      fetch("/api/notifications/check", { method: "POST" }).then(() => loadNotifications());
+      fetch("/api/notifications/check", { method: "POST" }).then(() => loadNotifications()).catch(() => {});
     }, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadNotifications]);
 
-  // Load health score and overdue count
   useEffect(() => {
     fetch("/api/health-score").then(r => r.json()).then(d => setHealthScore(d.score)).catch(() => {});
     fetch("/api/tenant").then(r => r.json()).then(d => { if (d?.systemName) setBrandName(d.systemName); }).catch(() => {});
     fetch("/api/dashboard/widgets").then(r => r.json()).then(d => setOverdueCount(d.overdueCount || 0)).catch(() => {});
   }, []);
 
-  // Toggle compact mode on body
   useEffect(() => {
     document.body.classList.toggle("compact-mode", compact);
   }, [compact]);
@@ -245,45 +387,49 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
-        {filteredSections.map((section) => (
-          <div key={section.label}>
-            <div className="px-2.5 mb-1.5 text-[10px] font-semibold tracking-wider text-[hsl(var(--muted-foreground))] uppercase">
-              {section.label}
+      <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+        {filteredSections.map((section) => {
+          const isCollapsed = collapsedSections[section.label] ?? false;
+          return (
+            <div key={section.label}>
+              <button
+                onClick={() => toggleSection(section.label)}
+                className="flex items-center w-full px-2.5 mb-1 mt-2 group"
+              >
+                <ChevronRight className={cn(
+                  "h-3 w-3 mr-1 text-[hsl(var(--muted-foreground))] transition-transform duration-200 opacity-0 group-hover:opacity-100",
+                  !isCollapsed && "rotate-90 opacity-100"
+                )} />
+                <span className="text-[10px] font-semibold tracking-wider text-[hsl(var(--muted-foreground))] uppercase">
+                  {section.label}
+                </span>
+              </button>
+              <AnimatePresence initial={false}>
+                {!isCollapsed && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="space-y-0.5">
+                      {section.items.map((item) => (
+                        <CollapsibleItem
+                          key={item.href + item.label}
+                          item={item}
+                          pathname={pathname}
+                          hasPermission={hasPermission}
+                          overdueCount={overdueCount}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            <div className="space-y-0.5">
-              {section.items.map((item) => {
-                const active = pathname === item.href;
-                return (
-                  <Tooltip key={item.href} delayDuration={600}>
-                    <TooltipTrigger asChild>
-                      <Link
-                        href={item.href}
-                        className={cn(
-                          "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
-                          active
-                            ? "bg-[hsl(var(--foreground)/0.08)] text-[hsl(var(--sidebar-foreground))] font-medium"
-                            : "text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--foreground)/0.05)] hover:text-[hsl(var(--sidebar-foreground))]"
-                        )}
-                      >
-                        <item.icon className="h-4 w-4 shrink-0" />
-                        <span className="flex-1">{item.label}</span>
-                        {item.href === "/payables" && overdueCount > 0 && (
-                          <span className="w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shrink-0">
-                            {overdueCount > 9 ? "9+" : overdueCount}
-                          </span>
-                        )}
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="text-xs hidden md:block">
-                      {item.label}
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Bottom */}
