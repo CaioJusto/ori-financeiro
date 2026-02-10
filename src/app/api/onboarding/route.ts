@@ -11,22 +11,12 @@ export async function GET() {
   });
 
   if (!progress) {
-    // Check what steps are already done
-    const [accounts, categories, goals] = await Promise.all([
-      prisma.account.count({ where: { tenantId: tenant.tenantId } }),
-      prisma.category.count({ where: { tenantId: tenant.tenantId } }),
-      prisma.savingsGoal.count({ where: { tenantId: tenant.tenantId } }),
-    ]);
-
-    const completedSteps: string[] = ["welcome"];
-    if (accounts > 0) completedSteps.push("accounts");
-    if (categories > 0) completedSteps.push("categories");
-    if (goals > 0) completedSteps.push("goals");
-
+    // No onboarding record = existing user (created before onboarding feature)
+    // Only new registrations create an OnboardingProgress record
     return NextResponse.json({
-      completedSteps,
+      completedSteps: [],
       skipped: false,
-      completed: completedSteps.length >= 5,
+      completed: true,
     });
   }
 
