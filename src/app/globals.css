@@ -133,6 +133,45 @@
   background: hsl(var(--muted-foreground) / 0.3);
 }
 
+/* Dashboard Edit Mode — react-grid-layout overrides */
+.layout.editing .react-grid-placeholder {
+  background: hsl(var(--primary) / 0.15) !important;
+  border: 2px dashed hsl(var(--primary) / 0.5) !important;
+  border-radius: 0.5rem;
+  opacity: 1 !important;
+}
+
+.dashboard-widget-editing .react-resizable-handle {
+  width: 16px !important;
+  height: 16px !important;
+  background: none !important;
+  z-index: 25;
+}
+
+.dashboard-widget-editing .react-resizable-handle::after {
+  content: "" !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-right: 2px solid hsl(var(--primary) / 0.5) !important;
+  border-bottom: 2px solid hsl(var(--primary) / 0.5) !important;
+  right: 4px !important;
+  bottom: 4px !important;
+}
+
+.dashboard-widget-editing .react-resizable-handle:hover::after {
+  border-color: hsl(var(--primary)) !important;
+}
+
+.dashboard-widget-editing {
+  transition: box-shadow 0.2s ease;
+}
+
+.react-grid-item.react-draggable-dragging {
+  opacity: 0.85;
+  box-shadow: 0 8px 32px -4px hsl(var(--primary) / 0.25);
+  z-index: 100;
+}
+
 /* Compact mode */
 .compact-mode .compact\:p-3 { padding: 0.75rem; }
 .compact-mode table td,

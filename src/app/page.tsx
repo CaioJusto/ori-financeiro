@@ -684,65 +684,77 @@ export default function Dashboard() {
       </div>
       <Separator />
 
-      {/* Add Widgets Panel (edit mode) */}
-      {customizing && removedWidgets.length > 0 && (
-        <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
-          <CardContent className="p-4">
-            <p className="text-sm font-medium mb-3 flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Adicionar Widgets
-            </p>
-            <div className="flex gap-2 flex-wrap">
-              {removedWidgets.map((w) => (
-                <Button key={w.id} variant="outline" size="sm" onClick={() => addWidget(w.id)} className="gap-2">
-                  <Plus className="h-3 w-3" />
-                  {w.label}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Edit Mode Overlay Banner */}
+      {customizing && (
+        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+          {/* Removed widgets chips */}
+          {removedWidgets.length > 0 && (
+            <Card className="border-dashed border-2 border-primary/40 bg-primary/5 backdrop-blur-sm">
+              <CardContent className="p-4">
+                <p className="text-sm font-medium mb-3 flex items-center gap-2 text-primary">
+                  <Plus className="h-4 w-4" />
+                  Widgets Ocultos — clique para adicionar
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {removedWidgets.map((w) => (
+                    <button
+                      key={w.id}
+                      onClick={() => addWidget(w.id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-sm text-primary hover:bg-primary/20 hover:border-primary/50 transition-all duration-200 cursor-pointer"
+                    >
+                      <Plus className="h-3 w-3" />
+                      {w.label}
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Grid Layout */}
-      <ResponsiveReactGridLayout
-        className="layout"
-        layouts={layouts}
-        breakpoints={{ lg: 1200, md: 996, sm: 768 }}
-        cols={{ lg: 12, md: 10, sm: 6 }}
-        rowHeight={30}
-        isDraggable={customizing}
-        isResizable={customizing}
-        onLayoutChange={onLayoutChange}
-        draggableHandle=".drag-handle"
-        useCSSTransforms={true}
-        compactType="vertical"
-        margin={[16, 16]}
-      >
-        {visibleWidgets.map((widget) => (
-          <div key={widget.id} className="relative group">
-            {customizing && (
-              <>
-                <div className="drag-handle absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing p-1 rounded bg-muted/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <GripVertical className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <button
-                  onClick={() => removeWidget(widget.id)}
-                  className="absolute top-2 right-2 z-20 p-1 rounded bg-destructive/80 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-                <div className="absolute bottom-0 left-0 right-0 z-10 bg-muted/60 text-center py-0.5 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  {widget.label}
-                </div>
-              </>
-            )}
-            <div className={`h-full ${customizing ? "ring-1 ring-primary/20 rounded-lg" : ""}`}>
-              {renderWidget(widget.id)}
+      <div className={`transition-all duration-300 ${customizing ? "bg-muted/30 rounded-xl p-2 -m-2 ring-1 ring-primary/10" : ""}`}>
+        <ResponsiveReactGridLayout
+          className={`layout ${customizing ? "editing" : ""}`}
+          layouts={layouts}
+          breakpoints={{ lg: 1200, md: 996, sm: 768 }}
+          cols={{ lg: 12, md: 10, sm: 6 }}
+          rowHeight={30}
+          isDraggable={customizing}
+          isResizable={customizing}
+          onLayoutChange={onLayoutChange}
+          draggableHandle=".drag-handle"
+          useCSSTransforms={true}
+          compactType="vertical"
+          margin={[16, 16]}
+        >
+          {visibleWidgets.map((widget) => (
+            <div key={widget.id} className={`relative group ${customizing ? "dashboard-widget-editing" : ""}`}>
+              {customizing && (
+                <>
+                  {/* Drag handle bar — always visible */}
+                  <div className="drag-handle absolute top-0 left-0 right-0 z-20 flex items-center justify-center gap-1 h-7 cursor-grab active:cursor-grabbing rounded-t-lg bg-primary/10 hover:bg-primary/20 border-b border-dashed border-primary/30 transition-colors">
+                    <GripVertical className="h-3.5 w-3.5 text-primary/60" />
+                    <span className="text-[10px] font-medium text-primary/60 select-none">{widget.label}</span>
+                    <GripVertical className="h-3.5 w-3.5 text-primary/60" />
+                  </div>
+                  {/* Remove button — always visible */}
+                  <button
+                    onClick={() => removeWidget(widget.id)}
+                    className="absolute top-1 right-1.5 z-30 p-1 rounded-full bg-destructive/90 text-destructive-foreground hover:bg-destructive hover:scale-110 transition-all shadow-sm"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </>
+              )}
+              <div className={`h-full transition-all duration-200 ${customizing ? "border-2 border-dashed border-primary/30 rounded-lg pt-7 hover:border-primary/50 hover:shadow-md" : ""}`}>
+                {renderWidget(widget.id)}
+              </div>
             </div>
-          </div>
-        ))}
-      </ResponsiveReactGridLayout>
+          ))}
+        </ResponsiveReactGridLayout>
+      </div>
     </div>
   );
 }
