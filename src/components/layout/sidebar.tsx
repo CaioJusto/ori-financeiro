@@ -132,6 +132,7 @@ const sections: SidebarSection[] = [
           { href: "/settings/api-keys", label: "Chaves API", icon: ShieldCheck },
           { href: "/settings/webhooks", label: "Webhooks", icon: Activity },
           { href: "/settings/mcp", label: "MCP Server", icon: Activity },
+          { href: "/settings/ai", label: "Agente IA", icon: Wand2 },
           { href: "/settings/alerts", label: "Alertas", icon: Bell },
           { href: "/settings/scheduled-reports", label: "Relatórios Agendados", icon: FileBarChart },
           { href: "/settings/budget-templates", label: "Templates Orçamento", icon: BookOpen },

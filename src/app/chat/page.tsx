@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MessageSquare, Plus, Send, Trash2, Bot, User, Sparkles, Search, PanelLeftClose, PanelLeft, ArrowDown, Zap, TrendingUp, PiggyBank, Target, Lightbulb, ThumbsUp, ThumbsDown, Copy, Check, Pin, PinOff, Pencil, Mic, Paperclip, Download, X } from "lucide-react";
+import { MessageSquare, Plus, Send, Trash2, Bot, User, Sparkles, Search, PanelLeftClose, PanelLeft, ArrowDown, Zap, TrendingUp, PiggyBank, Target, Lightbulb, ThumbsUp, ThumbsDown, Copy, Check, Pin, PinOff, Pencil, Mic, Paperclip, Download, X, Settings, AlertCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import Link from "next/link";
 
 interface Message {
   id: string;
@@ -91,6 +92,7 @@ export default function ChatPage() {
   const [editTitle, setEditTitle] = useState("");
   const [reactions, setReactions] = useState<Record<string, "up" | "down" | null>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [aiEnabled, setAiEnabled] = useState<boolean | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -106,6 +108,10 @@ export default function ChatPage() {
     fetch("/api/chat/conversations")
       .then(r => r.json())
       .then(setConversations)
+      .catch(() => {});
+    fetch("/api/settings/ai")
+      .then(r => r.json())
+      .then(data => setAiEnabled(data.aiEnabled && data.aiApiKeySet))
       .catch(() => {});
   }, []);
 
@@ -401,6 +407,18 @@ export default function ChatPage() {
             )}
           </div>
         </header>
+
+        {/* AI Not Configured Banner */}
+        {aiEnabled === false && (
+          <div className="px-5 py-2.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2 text-xs text-amber-400">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>IA não configurada — usando respostas locais.</span>
+            <Link href="/settings/ai" className="ml-auto flex items-center gap-1 text-amber-300 hover:text-amber-200 transition-colors font-medium">
+              <Settings className="w-3 h-3" />
+              Configurar
+            </Link>
+          </div>
+        )}
 
         {/* Message Search Bar */}
         {showMessageSearch && (

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/tenant";
 import { parseIntent } from "@/lib/chat/intent-parser";
 import { executeIntent } from "@/lib/chat/action-executor";
+import { chatWithOpenAI } from "@/lib/chat/openai-chat";
 
 export async function POST(req: NextRequest) {
   const { error, tenant } = await requirePermission("transactions:read");
@@ -37,9 +38,19 @@ export async function POST(req: NextRequest) {
     data: { conversationId: convId, role: "USER", content: message },
   });
 
-  // Parse intent and execute
-  const intent = parseIntent(message);
-  const response = await executeIntent(intent, tenant);
+  // Try OpenAI first, fall back to local intent parser
+  let response: string;
+  let metadata: any;
+
+  const aiResult = await chatWithOpenAI(tenant, message, convId);
+  if (aiResult.usedAI && aiResult.response) {
+    response = aiResult.response;
+    metadata = { source: "openai" };
+  } else {
+    const intent = parseIntent(message);
+    response = await executeIntent(intent, tenant);
+    metadata = { intent: intent.action, confidence: intent.confidence, params: intent.params, source: "local" };
+  }
 
   // Save assistant message
   const assistantMsg = await prisma.chatMessage.create({
@@ -47,7 +58,7 @@ export async function POST(req: NextRequest) {
       conversationId: convId,
       role: "ASSISTANT",
       content: response,
-      metadata: JSON.parse(JSON.stringify({ intent: intent.action, confidence: intent.confidence, params: intent.params })),
+      metadata: JSON.parse(JSON.stringify(metadata)),
     },
   });
 
