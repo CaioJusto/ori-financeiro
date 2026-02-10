@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { SIDEBAR_PERMISSIONS } from "@/lib/permissions";
+import { useBranding } from "@/components/branding-provider";
 
 type SidebarItem = {
   href: string;
@@ -124,8 +125,7 @@ const sections: SidebarSection[] = [
           { href: "/settings/users", label: "Usuários", icon: Users },
           { href: "/settings/roles", label: "Papéis", icon: ShieldCheck },
           { href: "/settings/security", label: "Segurança", icon: ShieldCheck },
-          { href: "/settings/branding", label: "Branding", icon: Palette },
-          { href: "/settings/themes", label: "Temas", icon: Palette },
+          { href: "/settings/theme", label: "Tema & Branding", icon: Palette },
           { href: "/settings/currencies", label: "Moedas", icon: DollarSign },
           { href: "/settings/bank-connections", label: "Bancos", icon: Landmark },
           { href: "/settings/open-finance", label: "Open Finance", icon: Landmark },
@@ -276,6 +276,8 @@ export function Sidebar() {
   const [colorTheme, setColorTheme] = useState<string>("default");
   const [healthScore, setHealthScore] = useState<number | null>(null);
   const [brandName, setBrandName] = useState("Ori Financeiro");
+  const [brandLogo, setBrandLogo] = useState<string | null>(null);
+  const { branding } = useBranding();
   const [overdueCount, setOverdueCount] = useState(0);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
@@ -347,9 +349,20 @@ export function Sidebar() {
 
   useEffect(() => {
     fetch("/api/health-score").then(r => r.json()).then(d => setHealthScore(d.score)).catch(() => {});
-    fetch("/api/tenant").then(r => r.json()).then(d => { if (d?.systemName) setBrandName(d.systemName); }).catch(() => {});
+    fetch("/api/tenant").then(r => r.json()).then(d => {
+      if (d?.systemName) setBrandName(d.systemName);
+      if (d?.logoBase64) setBrandLogo(d.logoBase64);
+      else if (d?.logoUrl) setBrandLogo(d.logoUrl);
+    }).catch(() => {});
     fetch("/api/dashboard/widgets").then(r => r.json()).then(d => setOverdueCount(d.overdueCount || 0)).catch(() => {});
   }, []);
+
+  // Sync from branding context
+  useEffect(() => {
+    if (branding?.systemName) setBrandName(branding.systemName);
+    if (branding?.logoBase64) setBrandLogo(branding.logoBase64);
+    else if (branding?.logoUrl) setBrandLogo(branding.logoUrl);
+  }, [branding]);
 
   useEffect(() => {
     document.body.classList.toggle("compact-mode", compact);
@@ -360,9 +373,13 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex items-center justify-between h-12 px-4 shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-5 h-5 rounded bg-[hsl(var(--sidebar-accent))] flex items-center justify-center">
-            <span className="text-[10px] font-bold text-white">{brandName.charAt(0).toUpperCase()}</span>
-          </div>
+          {brandLogo ? (
+            <img src={brandLogo} alt={brandName} className="w-5 h-5 rounded object-contain" />
+          ) : (
+            <div className="w-5 h-5 rounded bg-[hsl(var(--sidebar-accent))] flex items-center justify-center">
+              <span className="text-[10px] font-bold text-white">{brandName.charAt(0).toUpperCase()}</span>
+            </div>
+          )}
           <span className="text-sm font-semibold text-[hsl(var(--sidebar-foreground))]">{brandName}</span>
           {healthScore !== null && (
             <div className={cn("w-2 h-2 rounded-full shrink-0", healthScore >= 70 ? "bg-emerald-500" : healthScore >= 40 ? "bg-amber-500" : "bg-red-500")}

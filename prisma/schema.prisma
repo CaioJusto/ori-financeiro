@@ -92,7 +92,13 @@ model Tenant {
   primaryColor   String    @default("#7c3aed")
   secondaryColor String    @default("#6d28d9")
   accentColor    String    @default("#8b5cf6")
+  backgroundColor String   @default("")
+  textColor      String    @default("")
+  sidebarColor   String    @default("")
+  themeMode      String    @default("system")
   logoUrl        String?
+  logoBase64     String?   @db.Text
+  faviconBase64  String?   @db.Text
   systemName     String    @default("Ori Financeiro")
   favicon        String?
   createdAt      DateTime  @default(now())

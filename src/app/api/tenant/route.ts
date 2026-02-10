@@ -15,14 +15,16 @@ export async function PUT(req: NextRequest) {
   if (error) return error;
   const body = await req.json();
 
+  const allowedFields = [
+    "name", "primaryColor", "secondaryColor", "accentColor",
+    "backgroundColor", "textColor", "sidebarColor", "themeMode",
+    "logoUrl", "logoBase64", "faviconBase64", "systemName", "favicon",
+  ];
+
   const data: Record<string, unknown> = {};
-  if (body.name !== undefined) data.name = body.name;
-  if (body.primaryColor !== undefined) data.primaryColor = body.primaryColor;
-  if (body.secondaryColor !== undefined) data.secondaryColor = body.secondaryColor;
-  if (body.accentColor !== undefined) data.accentColor = body.accentColor;
-  if (body.logoUrl !== undefined) data.logoUrl = body.logoUrl;
-  if (body.systemName !== undefined) data.systemName = body.systemName;
-  if (body.favicon !== undefined) data.favicon = body.favicon;
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) data[field] = body[field];
+  }
 
   const t = await prisma.tenant.update({
     where: { id: tenant.tenantId },
