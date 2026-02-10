@@ -20,6 +20,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { SIDEBAR_PERMISSIONS } from "@/lib/permissions";
 import { useBranding } from "@/components/branding-provider";
+import { ChangelogSidebarButton } from "@/components/changelog-sidebar";
 
 type SidebarItem = {
   href: string;
@@ -507,6 +508,9 @@ export function Sidebar() {
             </div>
           )}
         </div>
+
+        {/* Changelog / What's new */}
+        <ChangelogSidebarButton />
 
         {/* Compact mode */}
         <button

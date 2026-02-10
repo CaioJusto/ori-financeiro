@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { Onboarding } from "@/components/onboarding";
 import { ProductTour } from "@/components/product-tour";
 import { KeyboardShortcutsOverlay } from "@/components/keyboard-shortcuts-overlay";
-import { ChangelogModal } from "@/components/changelog-modal";
 
 const AUTH_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
@@ -21,7 +20,6 @@ export function AuthGuardModals() {
       <Onboarding />
       <ProductTour />
       <KeyboardShortcutsOverlay />
-      <ChangelogModal />
     </>
   );
 }
