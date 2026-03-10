@@ -233,6 +233,47 @@ export type Database = {
           },
         ];
       };
+      org_invitations: {
+        Row: {
+          id: string;
+          organization_id: string;
+          email: string;
+          role: "owner" | "admin" | "member";
+          invited_by: string;
+          status: "pending" | "accepted" | "expired";
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          email: string;
+          role?: "owner" | "admin" | "member";
+          invited_by: string;
+          status?: "pending" | "accepted" | "expired";
+          created_at?: string;
+          expires_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          email?: string;
+          role?: "owner" | "admin" | "member";
+          invited_by?: string;
+          status?: "pending" | "accepted" | "expired";
+          created_at?: string;
+          expires_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "org_invitations_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       categories: {
         Row: {
           id: string;
@@ -280,6 +321,7 @@ export type Database = {
     Functions: Record<string, never>;
     Enums: {
       account_type: "personal" | "company" | "cash2";
+      invitation_status: "pending" | "accepted" | "expired";
       member_role: "owner" | "admin" | "member";
       transaction_type: "income" | "expense" | "transfer";
     };

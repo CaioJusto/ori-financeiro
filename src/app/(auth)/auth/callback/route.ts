@@ -16,6 +16,30 @@ export async function GET(request: Request) {
       } = await supabase.auth.getUser();
 
       if (user) {
+        // Accept any pending invitations for this email
+        const { data: pendingInvites } = await supabase
+          .from("org_invitations")
+          .select("id, organization_id, role")
+          .eq("email", user.email!)
+          .eq("status", "pending");
+
+        if (pendingInvites && pendingInvites.length > 0) {
+          for (const invite of pendingInvites) {
+            // Add user to org
+            await supabase.from("org_members").upsert({
+              organization_id: invite.organization_id,
+              user_id: user.id,
+              role: invite.role,
+            }, { onConflict: "organization_id,user_id" });
+
+            // Mark invitation as accepted
+            await supabase
+              .from("org_invitations")
+              .update({ status: "accepted" })
+              .eq("id", invite.id);
+          }
+        }
+
         const { data: existingOrgs } = await supabase
           .from("organizations")
           .select("id")
