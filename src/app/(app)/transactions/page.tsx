@@ -56,6 +56,7 @@ export default function TransactionsPage() {
     amount: "",
     type: "expense" as "income" | "expense" | "transfer",
     cash_account_id: "",
+    destination_account_id: "",
     date: new Date().toISOString().split("T")[0],
     selectedTags: [] as string[],
   });
@@ -186,6 +187,10 @@ export default function TransactionsPage() {
       .insert({
         organization_id: currentOrg.id,
         cash_account_id: form.cash_account_id,
+        destination_account_id:
+          form.type === "transfer" && form.destination_account_id
+            ? form.destination_account_id
+            : null,
         amount: form.type === "expense" ? -amountCents : amountCents,
         type: form.type,
         description: form.description,
@@ -205,28 +210,14 @@ export default function TransactionsPage() {
       );
     }
 
-    if (txn) {
-      const delta = form.type === "expense" ? -amountCents : amountCents;
-      const { data: accountRaw } = await supabase
-        .from("cash_accounts")
-        .select("balance")
-        .eq("id", form.cash_account_id)
-        .single();
-      const account = accountRaw as { balance: number } | null;
-
-      if (account) {
-        await supabase
-          .from("cash_accounts")
-          .update({ balance: account.balance + delta })
-          .eq("id", form.cash_account_id);
-      }
-    }
+    // Balance is now updated atomically by the DB trigger (sync_account_balance)
 
     setForm({
       description: "",
       amount: "",
       type: "expense",
       cash_account_id: accounts[0]?.id ?? "",
+      destination_account_id: "",
       date: new Date().toISOString().split("T")[0],
       selectedTags: [],
     });
@@ -311,7 +302,7 @@ export default function TransactionsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Conta</Label>
+                <Label>{form.type === "transfer" ? "Conta de Origem" : "Conta"}</Label>
                 <select
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                   value={form.cash_account_id}
@@ -324,6 +315,26 @@ export default function TransactionsPage() {
                   ))}
                 </select>
               </div>
+              {form.type === "transfer" && (
+                <div className="space-y-2">
+                  <Label>Conta de Destino</Label>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                    value={form.destination_account_id}
+                    onChange={(e) => setForm((f) => ({ ...f, destination_account_id: e.target.value }))}
+                    required
+                  >
+                    <option value="">Selecione...</option>
+                    {accounts
+                      .filter((a) => a.id !== form.cash_account_id)
+                      .map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
               {tags.length > 0 && (
                 <div className="space-y-2">
                   <Label>Tags</Label>

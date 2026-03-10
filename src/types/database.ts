@@ -105,6 +105,7 @@ export type Database = {
           id: string;
           organization_id: string;
           cash_account_id: string;
+          destination_account_id: string | null;
           amount: number;
           type: "income" | "expense" | "transfer";
           description: string;
@@ -117,6 +118,7 @@ export type Database = {
           id?: string;
           organization_id: string;
           cash_account_id: string;
+          destination_account_id?: string | null;
           amount: number;
           type: "income" | "expense" | "transfer";
           description?: string;
@@ -129,6 +131,7 @@ export type Database = {
           id?: string;
           organization_id?: string;
           cash_account_id?: string;
+          destination_account_id?: string | null;
           amount?: number;
           type?: "income" | "expense" | "transfer";
           description?: string;
@@ -148,6 +151,13 @@ export type Database = {
           {
             foreignKeyName: "transactions_cash_account_id_fkey";
             columns: ["cash_account_id"];
+            isOneToOne: false;
+            referencedRelation: "cash_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "transactions_destination_account_id_fkey";
+            columns: ["destination_account_id"];
             isOneToOne: false;
             referencedRelation: "cash_accounts";
             referencedColumns: ["id"];
