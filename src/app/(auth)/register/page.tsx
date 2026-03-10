@@ -15,6 +15,7 @@ export default function RegisterPage() {
   const [orgName, setOrgName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -24,9 +25,17 @@ export default function RegisterPage() {
     setLoading(true);
 
     // 1. Sign up
+    const slug = orgName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: { org_name: orgName, org_slug: slug },
+      },
     });
 
     if (authError) {
@@ -41,12 +50,14 @@ export default function RegisterPage() {
       return;
     }
 
-    // 2. Create organization
-    const slug = orgName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
+    // Check if email confirmation is required (session will be null)
+    if (!authData.session) {
+      setConfirmationSent(true);
+      setLoading(false);
+      return;
+    }
 
+    // 2. Create organization
     const { data: orgRaw, error: orgError } = await supabase
       .from("organizations")
       .insert({ name: orgName, slug })
@@ -75,6 +86,30 @@ export default function RegisterPage() {
     ]);
 
     router.push("/dashboard");
+  }
+
+  if (confirmationSent) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">Verifique seu Email</CardTitle>
+            <CardDescription>
+              Enviamos um link de confirmação para <strong>{email}</strong>.
+              Clique no link no email para ativar sua conta.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-sm text-muted-foreground mb-4">
+              Após confirmar, faça login para configurar sua organização.
+            </p>
+            <Link href="/login">
+              <Button variant="outline" className="w-full">Ir para Login</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,7 @@ import {
 import { useOrg } from "@/contexts/org-context";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight } from "lucide-react";
+import { Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Search, X } from "lucide-react";
 import type { Database } from "@/types/database";
 
 type Transaction = Database["public"]["Tables"]["transactions"]["Row"] & {
@@ -34,7 +34,7 @@ type Transaction = Database["public"]["Tables"]["transactions"]["Row"] & {
 const typeConfig = {
   income: { label: "Receita", icon: ArrowUpRight, color: "text-green-500" },
   expense: { label: "Despesa", icon: ArrowDownLeft, color: "text-red-500" },
-  transfer: { label: "Transferência", icon: ArrowLeftRight, color: "text-blue-500" },
+  transfer: { label: "Transferencia", icon: ArrowLeftRight, color: "text-blue-500" },
 };
 
 export default function TransactionsPage() {
@@ -44,6 +44,11 @@ export default function TransactionsPage() {
   const [tags, setTags] = useState<{ id: string; name: string; color: string }[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterTag, setFilterTag] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string | null>(null);
+  const [filterAccount, setFilterAccount] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // Form state
   const [form, setForm] = useState({
@@ -65,7 +70,6 @@ export default function TransactionsPage() {
   async function loadData() {
     const orgId = currentOrg!.id;
 
-    // Load accounts and tags
     const [accountsRes, tagsRes] = await Promise.all([
       supabase.from("cash_accounts").select("id, name").eq("organization_id", orgId),
       supabase.from("tags").select("id, name, color").eq("organization_id", orgId),
@@ -78,19 +82,17 @@ export default function TransactionsPage() {
       setForm((f) => ({ ...f, cash_account_id: (accountsRes.data as { id: string }[])[0].id }));
     }
 
-    // Load transactions with tags
     let query = supabase
       .from("transactions")
       .select("*, cash_accounts(name)")
       .eq("organization_id", orgId)
       .order("date", { ascending: false })
-      .limit(100);
+      .limit(200);
 
     const { data: txnsRaw } = await query;
     const txns = txnsRaw as (Database["public"]["Tables"]["transactions"]["Row"] & { cash_accounts: { name: string } | null })[] | null;
 
     if (txns) {
-      // Load tags for each transaction
       const txnIds = txns.map((t) => t.id);
       const { data: txnTags } = await supabase
         .from("transaction_tags")
@@ -112,13 +114,63 @@ export default function TransactionsPage() {
           .filter(Boolean) as { id: string; name: string; color: string }[],
       }));
 
-      if (filterTag) {
-        setTransactions(enriched.filter((t) => t.tags.some((tag) => tag.id === filterTag)));
-      } else {
-        setTransactions(enriched);
-      }
+      setTransactions(enriched);
     }
   }
+
+  // Client-side filtering
+  const filteredTransactions = useMemo(() => {
+    let result = transactions;
+
+    if (filterTag) {
+      result = result.filter((t) => t.tags.some((tag) => tag.id === filterTag));
+    }
+    if (filterType) {
+      result = result.filter((t) => t.type === filterType);
+    }
+    if (filterAccount) {
+      result = result.filter((t) => t.cash_account_id === filterAccount);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (t) =>
+          t.description.toLowerCase().includes(q) ||
+          t.cash_accounts?.name.toLowerCase().includes(q) ||
+          t.tags.some((tag) => tag.name.toLowerCase().includes(q))
+      );
+    }
+    if (dateFrom) {
+      result = result.filter((t) => t.date >= dateFrom);
+    }
+    if (dateTo) {
+      result = result.filter((t) => t.date <= dateTo);
+    }
+
+    return result;
+  }, [transactions, filterTag, filterType, filterAccount, searchQuery, dateFrom, dateTo]);
+
+  const hasActiveFilters = filterTag || filterType || filterAccount || searchQuery || dateFrom || dateTo;
+
+  function clearFilters() {
+    setFilterTag(null);
+    setFilterType(null);
+    setFilterAccount(null);
+    setSearchQuery("");
+    setDateFrom("");
+    setDateTo("");
+  }
+
+  // Summary of filtered results
+  const summary = useMemo(() => {
+    const income = filteredTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const expense = filteredTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    return { income, expense, net: income - expense, count: filteredTransactions.length };
+  }, [filteredTransactions]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -153,7 +205,6 @@ export default function TransactionsPage() {
       );
     }
 
-    // Update account balance
     if (txn) {
       const delta = form.type === "expense" ? -amountCents : amountCents;
       const { data: accountRaw } = await supabase
@@ -196,19 +247,19 @@ export default function TransactionsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Transações</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Transacoes</h1>
           <p className="text-muted-foreground">
-            Registre e acompanhe suas movimentações
+            Registre e acompanhe suas movimentacoes
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger render={<Button />}>
             <Plus className="mr-2 h-4 w-4" />
-            Nova Transação
+            Nova Transacao
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nova Transação</DialogTitle>
+              <DialogTitle>Nova Transacao</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
@@ -228,7 +279,7 @@ export default function TransactionsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Descrição</Label>
+                <Label>Descricao</Label>
                 <Input
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -296,53 +347,147 @@ export default function TransactionsPage() {
                 </div>
               )}
               <Button type="submit" className="w-full">
-                Criar Transação
+                Criar Transacao
               </Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Tag filter */}
-      {tags.length > 0 && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Filtrar por tag:</span>
+      {/* Search and filters */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por descricao, conta ou tag..."
+              className="pl-9"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-[150px]"
+              placeholder="De"
+            />
+            <span className="text-muted-foreground text-sm">ate</span>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-[150px]"
+              placeholder="Ate"
+            />
+          </div>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <X className="mr-1 h-3 w-3" />
+              Limpar
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Type filters */}
+          <span className="text-sm text-muted-foreground">Tipo:</span>
           <Badge
-            variant={filterTag === null ? "default" : "outline"}
+            variant={filterType === null ? "default" : "outline"}
             className="cursor-pointer"
-            onClick={() => setFilterTag(null)}
+            onClick={() => setFilterType(null)}
           >
-            Todas
+            Todos
           </Badge>
-          {tags.map((tag) => (
+          {(["income", "expense", "transfer"] as const).map((type) => (
             <Badge
-              key={tag.id}
-              variant={filterTag === tag.id ? "default" : "outline"}
+              key={type}
+              variant={filterType === type ? "default" : "outline"}
               className="cursor-pointer"
-              style={{
-                backgroundColor: filterTag === tag.id ? tag.color : undefined,
-              }}
-              onClick={() => setFilterTag(tag.id)}
+              onClick={() => setFilterType(type)}
             >
-              {tag.name}
+              {typeConfig[type].label}
             </Badge>
           ))}
+
+          {/* Account filter */}
+          {accounts.length > 1 && (
+            <>
+              <span className="text-sm text-muted-foreground ml-2">Conta:</span>
+              <Badge
+                variant={filterAccount === null ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setFilterAccount(null)}
+              >
+                Todas
+              </Badge>
+              {accounts.map((a) => (
+                <Badge
+                  key={a.id}
+                  variant={filterAccount === a.id ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setFilterAccount(a.id)}
+                >
+                  {a.name}
+                </Badge>
+              ))}
+            </>
+          )}
         </div>
-      )}
+
+        {/* Tag filter */}
+        {tags.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-muted-foreground">Tag:</span>
+            <Badge
+              variant={filterTag === null ? "default" : "outline"}
+              className="cursor-pointer"
+              onClick={() => setFilterTag(null)}
+            >
+              Todas
+            </Badge>
+            {tags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant={filterTag === tag.id ? "default" : "outline"}
+                className="cursor-pointer"
+                style={{
+                  backgroundColor: filterTag === tag.id ? tag.color : undefined,
+                }}
+                onClick={() => setFilterTag(tag.id)}
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Summary bar */}
+      <div className="flex items-center gap-6 text-sm">
+        <span className="text-muted-foreground">{summary.count} transacoes</span>
+        <span className="text-green-500">Receitas: {formatCurrency(summary.income)}</span>
+        <span className="text-red-500">Despesas: {formatCurrency(summary.expense)}</span>
+        <span className={summary.net >= 0 ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
+          Resultado: {formatCurrency(summary.net)}
+        </span>
+      </div>
 
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Data</TableHead>
-              <TableHead>Descrição</TableHead>
+              <TableHead>Descricao</TableHead>
               <TableHead>Conta</TableHead>
               <TableHead>Tags</TableHead>
               <TableHead className="text-right">Valor</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.map((txn) => {
+            {filteredTransactions.map((txn) => {
               const config = typeConfig[txn.type];
               const Icon = config.icon;
               return (
@@ -379,10 +524,10 @@ export default function TransactionsPage() {
                 </TableRow>
               );
             })}
-            {transactions.length === 0 && (
+            {filteredTransactions.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Nenhuma transação encontrada.
+                  Nenhuma transacao encontrada.
                 </TableCell>
               </TableRow>
             )}

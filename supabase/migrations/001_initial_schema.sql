@@ -105,6 +105,16 @@ AS $$
   SELECT organization_id FROM org_members WHERE user_id = auth.uid();
 $$;
 
+-- Helper function: get org IDs where user is owner (avoids infinite recursion on org_members)
+CREATE OR REPLACE FUNCTION get_user_owner_org_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT organization_id FROM org_members WHERE user_id = auth.uid() AND role = 'owner';
+$$;
+
 -- RLS Policies
 
 -- Organizations: users can see orgs they belong to
@@ -123,12 +133,7 @@ CREATE POLICY "Users can view org members"
 
 CREATE POLICY "Owners can manage members"
   ON org_members FOR ALL
-  USING (
-    organization_id IN (
-      SELECT organization_id FROM org_members
-      WHERE user_id = auth.uid() AND role = 'owner'
-    )
-  );
+  USING (organization_id IN (SELECT get_user_owner_org_ids()));
 
 CREATE POLICY "Users can join organizations"
   ON org_members FOR INSERT

@@ -9,6 +9,7 @@ import {
   LogOut,
   Building2,
   ChevronDown,
+  FileBarChart,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -38,7 +39,8 @@ const navItems = [
   { title: "Transações", href: "/transactions", icon: ArrowLeftRight },
   { title: "Contas", href: "/accounts", icon: Wallet },
   { title: "Tags", href: "/tags", icon: Tags },
-  { title: "Configurações", href: "/settings", icon: Settings },
+  { title: "Relatorios", href: "/reports", icon: FileBarChart },
+  { title: "Configuracoes", href: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {

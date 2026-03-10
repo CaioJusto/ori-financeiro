@@ -28,7 +28,11 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(error.message);
+      if (error.message.includes("Email not confirmed")) {
+        setError("Email ainda não confirmado. Verifique sua caixa de entrada e clique no link de confirmação.");
+      } else {
+        setError(error.message);
+      }
       setLoading(false);
       return;
     }
