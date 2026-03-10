@@ -23,7 +23,7 @@ import {
 import { useOrg } from "@/contexts/org-context";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Search, X, Pencil, Trash2 } from "lucide-react";
+import { Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Search, X, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Database } from "@/types/database";
 
 type Category = { id: string; name: string; icon: string | null };
@@ -40,9 +40,13 @@ const typeConfig = {
   transfer: { label: "Transferencia", icon: ArrowLeftRight, color: "text-blue-500" },
 };
 
+const PAGE_SIZE = 50;
+
 export default function TransactionsPage() {
   const { currentOrg } = useOrg();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(0);
   const [accounts, setAccounts] = useState<{ id: string; name: string }[]>([]);
   const [tags, setTags] = useState<{ id: string; name: string; color: string }[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -74,7 +78,7 @@ export default function TransactionsPage() {
   useEffect(() => {
     if (!currentOrg) return;
     loadData();
-  }, [currentOrg, filterTag]);
+  }, [currentOrg, filterTag, page]);
 
   async function loadData() {
     const orgId = currentOrg!.id;
@@ -93,12 +97,22 @@ export default function TransactionsPage() {
       setForm((f) => ({ ...f, cash_account_id: (accountsRes.data as { id: string }[])[0].id }));
     }
 
+    const from = page * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    // Get total count
+    const { count } = await supabase
+      .from("transactions")
+      .select("*", { count: "exact", head: true })
+      .eq("organization_id", orgId);
+    setTotalCount(count ?? 0);
+
     let query = supabase
       .from("transactions")
       .select("*, cash_accounts(name), categories(id, name, icon)")
       .eq("organization_id", orgId)
       .order("date", { ascending: false })
-      .limit(200);
+      .range(from, to);
 
     const { data: txnsRaw } = await query;
     const txns = txnsRaw as (Database["public"]["Tables"]["transactions"]["Row"] & { cash_accounts: { name: string } | null; categories: { id: string; name: string; icon: string | null } | null })[] | null;
@@ -175,6 +189,7 @@ export default function TransactionsPage() {
     setSearchQuery("");
     setDateFrom("");
     setDateTo("");
+    setPage(0);
   }
 
   // Summary of filtered results
@@ -751,7 +766,9 @@ export default function TransactionsPage() {
 
       {/* Summary bar */}
       <div className="flex items-center gap-6 text-sm">
-        <span className="text-muted-foreground">{summary.count} transacoes</span>
+        <span className="text-muted-foreground">
+          {summary.count} transacoes{totalCount > PAGE_SIZE ? ` (pagina ${page + 1})` : ""}
+        </span>
         <span className="text-green-500">Receitas: {formatCurrency(summary.income)}</span>
         <span className="text-red-500">Despesas: {formatCurrency(summary.expense)}</span>
         <span className={summary.net >= 0 ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
@@ -854,6 +871,38 @@ export default function TransactionsPage() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination controls */}
+      {totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            {totalCount} transacoes no total
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 0}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Anterior
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Pagina {page + 1} de {Math.ceil(totalCount / PAGE_SIZE)}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={(page + 1) * PAGE_SIZE >= totalCount}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Proximo
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
