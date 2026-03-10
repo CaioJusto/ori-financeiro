@@ -23,7 +23,7 @@ import {
 import { useOrg } from "@/contexts/org-context";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Search, X } from "lucide-react";
+import { Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Search, X, Pencil, Trash2 } from "lucide-react";
 import type { Database } from "@/types/database";
 
 type Category = { id: string; name: string; icon: string | null };
@@ -47,6 +47,8 @@ export default function TransactionsPage() {
   const [tags, setTags] = useState<{ id: string; name: string; color: string }[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingTxn, setEditingTxn] = useState<Transaction | null>(null);
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string | null>(null);
@@ -249,6 +251,83 @@ export default function TransactionsPage() {
     }));
   }
 
+  function openEdit(txn: Transaction) {
+    setEditingTxn(txn);
+    setForm({
+      description: txn.description,
+      amount: (Math.abs(txn.amount) / 100).toFixed(2),
+      type: txn.type as "income" | "expense" | "transfer",
+      cash_account_id: txn.cash_account_id,
+      destination_account_id: txn.destination_account_id ?? "",
+      date: txn.date,
+      selectedTags: txn.tags.map((t) => t.id),
+      category_id: txn.category_id ?? "",
+    });
+    setEditOpen(true);
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingTxn) return;
+
+    const amountCents = Math.round(parseFloat(form.amount) * 100);
+
+    await supabase
+      .from("transactions")
+      .update({
+        cash_account_id: form.cash_account_id,
+        destination_account_id:
+          form.type === "transfer" && form.destination_account_id
+            ? form.destination_account_id
+            : null,
+        amount: form.type === "expense" ? -amountCents : amountCents,
+        type: form.type,
+        description: form.description,
+        date: form.date,
+        category_id: form.category_id || null,
+      })
+      .eq("id", editingTxn.id);
+
+    // Sync tags: delete old, insert new
+    await supabase
+      .from("transaction_tags")
+      .delete()
+      .eq("transaction_id", editingTxn.id);
+
+    if (form.selectedTags.length > 0) {
+      await supabase.from("transaction_tags").insert(
+        form.selectedTags.map((tagId) => ({
+          transaction_id: editingTxn.id,
+          tag_id: tagId,
+        }))
+      );
+    }
+
+    setEditOpen(false);
+    setEditingTxn(null);
+    setForm({
+      description: "",
+      amount: "",
+      type: "expense",
+      cash_account_id: accounts[0]?.id ?? "",
+      destination_account_id: "",
+      date: new Date().toISOString().split("T")[0],
+      selectedTags: [],
+      category_id: "",
+    });
+    loadData();
+  }
+
+  async function handleDelete(txnId: string) {
+    if (!confirm("Tem certeza que deseja excluir esta transacao?")) return;
+
+    // Delete tag associations first
+    await supabase.from("transaction_tags").delete().eq("transaction_id", txnId);
+    // Delete transaction (DB trigger handles balance adjustment)
+    await supabase.from("transactions").delete().eq("id", txnId);
+    loadData();
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -396,6 +475,141 @@ export default function TransactionsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) setEditingTxn(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Transacao</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <div className="flex gap-2">
+                {(["income", "expense", "transfer"] as const).map((type) => (
+                  <Button
+                    key={type}
+                    type="button"
+                    variant={form.type === type ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setForm((f) => ({ ...f, type }))}
+                  >
+                    {typeConfig[type].label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Descricao</Label>
+              <Input
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Ex: Pagamento fornecedor"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={form.amount}
+                  onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                  placeholder="0,00"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{form.type === "transfer" ? "Conta de Origem" : "Conta"}</Label>
+              <select
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                value={form.cash_account_id}
+                onChange={(e) => setForm((f) => ({ ...f, cash_account_id: e.target.value }))}
+              >
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {form.type === "transfer" && (
+              <div className="space-y-2">
+                <Label>Conta de Destino</Label>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                  value={form.destination_account_id}
+                  onChange={(e) => setForm((f) => ({ ...f, destination_account_id: e.target.value }))}
+                  required
+                >
+                  <option value="">Selecione...</option>
+                  {accounts
+                    .filter((a) => a.id !== form.cash_account_id)
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+            {categories.length > 0 && (
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                  value={form.category_id}
+                  onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))}
+                >
+                  <option value="">Sem categoria</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {tags.length > 0 && (
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <Badge
+                      key={tag.id}
+                      variant={form.selectedTags.includes(tag.id) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      style={{
+                        backgroundColor: form.selectedTags.includes(tag.id)
+                          ? tag.color
+                          : undefined,
+                      }}
+                      onClick={() => toggleTag(tag.id)}
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            <Button type="submit" className="w-full">
+              Salvar Alteracoes
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Search and filters */}
       <div className="space-y-3">
@@ -555,6 +769,7 @@ export default function TransactionsPage() {
               <TableHead>Categoria</TableHead>
               <TableHead>Tags</TableHead>
               <TableHead className="text-right">Valor</TableHead>
+              <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -606,12 +821,32 @@ export default function TransactionsPage() {
                   <TableCell className={`text-right font-mono ${config.color}`}>
                     {formatCurrency(Math.abs(txn.amount))}
                   </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        onClick={() => openEdit(txn)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-red-500"
+                        onClick={() => handleDelete(txn.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               );
             })}
             {filteredTransactions.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhuma transacao encontrada.
                 </TableCell>
               </TableRow>
