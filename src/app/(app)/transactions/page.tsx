@@ -26,9 +26,12 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Search, X } from "lucide-react";
 import type { Database } from "@/types/database";
 
+type Category = { id: string; name: string; icon: string | null };
+
 type Transaction = Database["public"]["Tables"]["transactions"]["Row"] & {
   cash_accounts: { name: string } | null;
   tags: { id: string; name: string; color: string }[];
+  category: Category | null;
 };
 
 const typeConfig = {
@@ -42,8 +45,10 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<{ id: string; name: string }[]>([]);
   const [tags, setTags] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterTag, setFilterTag] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string | null>(null);
   const [filterAccount, setFilterAccount] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,6 +64,7 @@ export default function TransactionsPage() {
     destination_account_id: "",
     date: new Date().toISOString().split("T")[0],
     selectedTags: [] as string[],
+    category_id: "",
   });
 
   const supabase = createClient();
@@ -71,13 +77,15 @@ export default function TransactionsPage() {
   async function loadData() {
     const orgId = currentOrg!.id;
 
-    const [accountsRes, tagsRes] = await Promise.all([
+    const [accountsRes, tagsRes, categoriesRes] = await Promise.all([
       supabase.from("cash_accounts").select("id, name").eq("organization_id", orgId),
       supabase.from("tags").select("id, name, color").eq("organization_id", orgId),
+      supabase.from("categories").select("id, name, icon").eq("organization_id", orgId).order("name"),
     ]);
 
     setAccounts((accountsRes.data as { id: string; name: string }[]) ?? []);
     setTags((tagsRes.data as { id: string; name: string; color: string }[]) ?? []);
+    setCategories((categoriesRes.data as Category[]) ?? []);
 
     if (accountsRes.data?.length && !form.cash_account_id) {
       setForm((f) => ({ ...f, cash_account_id: (accountsRes.data as { id: string }[])[0].id }));
@@ -85,13 +93,13 @@ export default function TransactionsPage() {
 
     let query = supabase
       .from("transactions")
-      .select("*, cash_accounts(name)")
+      .select("*, cash_accounts(name), categories(id, name, icon)")
       .eq("organization_id", orgId)
       .order("date", { ascending: false })
       .limit(200);
 
     const { data: txnsRaw } = await query;
-    const txns = txnsRaw as (Database["public"]["Tables"]["transactions"]["Row"] & { cash_accounts: { name: string } | null })[] | null;
+    const txns = txnsRaw as (Database["public"]["Tables"]["transactions"]["Row"] & { cash_accounts: { name: string } | null; categories: { id: string; name: string; icon: string | null } | null })[] | null;
 
     if (txns) {
       const txnIds = txns.map((t) => t.id);
@@ -113,6 +121,7 @@ export default function TransactionsPage() {
         tags: (tagMap.get(t.id) ?? [])
           .map((tagId) => allTags.find((tag) => tag.id === tagId))
           .filter(Boolean) as { id: string; name: string; color: string }[],
+        category: t.categories ?? null,
       }));
 
       setTransactions(enriched);
@@ -132,6 +141,9 @@ export default function TransactionsPage() {
     if (filterAccount) {
       result = result.filter((t) => t.cash_account_id === filterAccount);
     }
+    if (filterCategory) {
+      result = result.filter((t) => t.category_id === filterCategory);
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -149,14 +161,15 @@ export default function TransactionsPage() {
     }
 
     return result;
-  }, [transactions, filterTag, filterType, filterAccount, searchQuery, dateFrom, dateTo]);
+  }, [transactions, filterTag, filterType, filterAccount, filterCategory, searchQuery, dateFrom, dateTo]);
 
-  const hasActiveFilters = filterTag || filterType || filterAccount || searchQuery || dateFrom || dateTo;
+  const hasActiveFilters = filterTag || filterType || filterAccount || filterCategory || searchQuery || dateFrom || dateTo;
 
   function clearFilters() {
     setFilterTag(null);
     setFilterType(null);
     setFilterAccount(null);
+    setFilterCategory(null);
     setSearchQuery("");
     setDateFrom("");
     setDateTo("");
@@ -196,6 +209,7 @@ export default function TransactionsPage() {
         description: form.description,
         date: form.date,
         created_by: user.id,
+        category_id: form.category_id || null,
       })
       .select()
       .single();
@@ -220,6 +234,7 @@ export default function TransactionsPage() {
       destination_account_id: "",
       date: new Date().toISOString().split("T")[0],
       selectedTags: [],
+      category_id: "",
     });
     setDialogOpen(false);
     loadData();
@@ -332,6 +347,23 @@ export default function TransactionsPage() {
                           {a.name}
                         </option>
                       ))}
+                  </select>
+                </div>
+              )}
+              {categories.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Categoria</Label>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                    value={form.category_id}
+                    onChange={(e) => setForm((f) => ({ ...f, category_id: e.target.value }))}
+                  >
+                    <option value="">Sem categoria</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -448,6 +480,33 @@ export default function TransactionsPage() {
           )}
         </div>
 
+        {/* Category filter */}
+        {categories.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-muted-foreground">Categoria:</span>
+            <Badge
+              variant={filterCategory === null ? "default" : "outline"}
+              className="cursor-pointer"
+              onClick={() => setFilterCategory(null)}
+            >
+              Todas
+            </Badge>
+            {categories.map((cat) => (
+              <Badge
+                key={cat.id}
+                variant={filterCategory === cat.id ? "default" : "outline"}
+                className="cursor-pointer"
+                style={{
+                  backgroundColor: filterCategory === cat.id ? (cat.icon ?? "#6366f1") : undefined,
+                }}
+                onClick={() => setFilterCategory(cat.id)}
+              >
+                {cat.name}
+              </Badge>
+            ))}
+          </div>
+        )}
+
         {/* Tag filter */}
         {tags.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
@@ -493,6 +552,7 @@ export default function TransactionsPage() {
               <TableHead>Data</TableHead>
               <TableHead>Descricao</TableHead>
               <TableHead>Conta</TableHead>
+              <TableHead>Categoria</TableHead>
               <TableHead>Tags</TableHead>
               <TableHead className="text-right">Valor</TableHead>
             </TableRow>
@@ -516,6 +576,20 @@ export default function TransactionsPage() {
                     {txn.cash_accounts?.name}
                   </TableCell>
                   <TableCell>
+                    {txn.category && (
+                      <Badge
+                        variant="secondary"
+                        style={{
+                          backgroundColor: (txn.category.icon ?? "#6366f1") + "20",
+                          color: txn.category.icon ?? "#6366f1",
+                        }}
+                        className="text-xs"
+                      >
+                        {txn.category.name}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <div className="flex gap-1">
                       {txn.tags.map((tag) => (
                         <Badge
@@ -537,7 +611,7 @@ export default function TransactionsPage() {
             })}
             {filteredTransactions.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   Nenhuma transacao encontrada.
                 </TableCell>
               </TableRow>

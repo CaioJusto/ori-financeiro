@@ -5,6 +5,7 @@ import {
   ArrowLeftRight,
   Wallet,
   Tags,
+  FolderTree,
   Settings,
   LogOut,
   Building2,
@@ -39,6 +40,7 @@ const navItems = [
   { title: "Transações", href: "/transactions", icon: ArrowLeftRight },
   { title: "Contas", href: "/accounts", icon: Wallet },
   { title: "Tags", href: "/tags", icon: Tags },
+  { title: "Categorias", href: "/categories", icon: FolderTree },
   { title: "Relatorios", href: "/reports", icon: FileBarChart },
   { title: "Configuracoes", href: "/settings", icon: Settings },
 ];
