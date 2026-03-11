@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,7 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const supabase = createClient();
 
   const isAdmin = currentUserRole === "owner" || currentUserRole === "admin";
@@ -107,6 +109,7 @@ export default function SettingsPage() {
       .eq("status", "pending")
       .order("created_at", { ascending: false });
     setInvitations((invData as Invitation[]) ?? []);
+    setPageLoading(false);
   }, [currentOrg, supabase]);
 
   useEffect(() => {
@@ -213,6 +216,57 @@ export default function SettingsPage() {
   async function handleCancelInvite(inviteId: string) {
     await supabase.from("org_invitations").delete().eq("id", inviteId);
     loadData();
+  }
+
+  if (pageLoading) {
+    return (
+      <div className="max-w-2xl space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Configurações</h1>
+          <p className="text-muted-foreground">Gerencie seu perfil e organização</p>
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-4 w-36" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <Skeleton className="h-9 w-28" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-4 w-44" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <Skeleton className="h-9 w-16" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-4 w-24" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-6 w-16" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

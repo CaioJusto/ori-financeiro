@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -65,6 +66,7 @@ export default function ReportsPage() {
   const [accounts, setAccounts] = useState<{ id: string; name: string }[]>([]);
   const [tags, setTags] = useState<{ id: string; name: string; color: string }[]>([]);
   const [txnTagMap, setTxnTagMap] = useState<Map<string, string[]>>(new Map());
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!currentOrg) return;
@@ -72,6 +74,7 @@ export default function ReportsPage() {
   }, [currentOrg, year, month]);
 
   async function loadReport() {
+    setLoading(true);
     const orgId = currentOrg!.id;
     const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
     const endDate = month === 11
@@ -119,6 +122,7 @@ export default function ReportsPage() {
     } else {
       setTxnTagMap(new Map());
     }
+    setLoading(false);
   }
 
   // Summary calculations
@@ -238,169 +242,220 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Receitas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">{formatCurrency(totalIncome)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {transactions.filter((t) => t.type === "income").length} lancamentos
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Despesas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">{formatCurrency(totalExpense)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {transactions.filter((t) => t.type === "expense").length} lancamentos
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Resultado do Mes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${totalIncome - totalExpense >= 0 ? "text-green-500" : "text-red-500"}`}>
-              {formatCurrency(totalIncome - totalExpense)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {transactions.length} transacoes no total
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Daily chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Movimentacao Diaria</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailyData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="day" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tickFormatter={(v) => formatCurrencyShort(v)} className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="income" name="Receitas" fill="#10b981" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="expense" name="Despesas" fill="#ef4444" radius={[2, 2, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      {loading ? (
+        <>
+          {/* Summary cards skeleton */}
+          <div className="grid gap-4 md:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="pb-2">
+                  <Skeleton className="h-4 w-24" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-32" />
+                  <Skeleton className="h-3 w-20 mt-2" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Expense by tag pie chart */}
-        {tagSummary.length > 0 && (
+          {/* Chart skeleton */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium">Despesas por Tag</CardTitle>
+              <Skeleton className="h-4 w-36" />
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
+              <Skeleton className="h-[250px] w-full" />
+            </CardContent>
+          </Card>
+          {/* Bottom cards skeleton */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-4 w-28" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-[300px] w-full" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-4 w-28" />
+              </CardHeader>
+              <CardContent>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-8 w-full mb-2" />
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Summary cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Total Receitas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-500">{formatCurrency(totalIncome)}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {transactions.filter((t) => t.type === "income").length} lancamentos
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Total Despesas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-500">{formatCurrency(totalExpense)}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {transactions.filter((t) => t.type === "expense").length} lancamentos
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Resultado do Mes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${totalIncome - totalExpense >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  {formatCurrency(totalIncome - totalExpense)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {transactions.length} transacoes no total
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Daily chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Movimentacao Diaria</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={tagSummary}
-                      dataKey="total"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={90}
-                      label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
-                    >
-                      {tagSummary.map((entry, i) => (
-                        <Cell key={i} fill={entry.color || COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                  </PieChart>
+                  <BarChart data={dailyData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="day" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis tickFormatter={(v) => formatCurrencyShort(v)} className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                    <Bar dataKey="income" name="Receitas" fill="#10b981" radius={[2, 2, 0, 0]} />
+                    <Bar dataKey="expense" name="Despesas" fill="#ef4444" radius={[2, 2, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {/* Account breakdown table */}
-        {accountSummary.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">Resumo por Conta</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Conta</TableHead>
-                    <TableHead className="text-right">Receitas</TableHead>
-                    <TableHead className="text-right">Despesas</TableHead>
-                    <TableHead className="text-right">Resultado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {accountSummary.map((a) => (
-                    <TableRow key={a.name}>
-                      <TableCell className="font-medium">{a.name}</TableCell>
-                      <TableCell className="text-right text-green-500">{formatCurrency(a.income)}</TableCell>
-                      <TableCell className="text-right text-red-500">{formatCurrency(a.expense)}</TableCell>
-                      <TableCell className={`text-right font-medium ${a.net >= 0 ? "text-green-500" : "text-red-500"}`}>
-                        {formatCurrency(a.net)}
-                      </TableCell>
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Expense by tag pie chart */}
+            {tagSummary.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">Despesas por Tag</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={tagSummary}
+                          dataKey="total"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
+                        >
+                          {tagSummary.map((entry, i) => (
+                            <Cell key={i} fill={entry.color || COLORS[i % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Account breakdown table */}
+            {accountSummary.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">Resumo por Conta</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Conta</TableHead>
+                        <TableHead className="text-right">Receitas</TableHead>
+                        <TableHead className="text-right">Despesas</TableHead>
+                        <TableHead className="text-right">Resultado</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {accountSummary.map((a) => (
+                        <TableRow key={a.name}>
+                          <TableCell className="font-medium">{a.name}</TableCell>
+                          <TableCell className="text-right text-green-500">{formatCurrency(a.income)}</TableCell>
+                          <TableCell className="text-right text-red-500">{formatCurrency(a.expense)}</TableCell>
+                          <TableCell className={`text-right font-medium ${a.net >= 0 ? "text-green-500" : "text-red-500"}`}>
+                            {formatCurrency(a.net)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Tag breakdown table */}
+          {tagSummary.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Detalhamento por Tag</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Tag</TableHead>
+                      <TableHead className="text-right">Total Despesas</TableHead>
+                      <TableHead className="text-right">% do Total</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Tag breakdown table */}
-      {tagSummary.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Detalhamento por Tag</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tag</TableHead>
-                  <TableHead className="text-right">Total Despesas</TableHead>
-                  <TableHead className="text-right">% do Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tagSummary.map((tag) => (
-                  <TableRow key={tag.name}>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        style={{ backgroundColor: tag.color + "20", color: tag.color }}
-                      >
-                        {tag.name}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono">{formatCurrency(tag.total)}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {totalExpense > 0 ? ((tag.total / totalExpense) * 100).toFixed(1) : 0}%
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {tagSummary.map((tag) => (
+                      <TableRow key={tag.name}>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            style={{ backgroundColor: tag.color + "20", color: tag.color }}
+                          >
+                            {tag.name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">{formatCurrency(tag.total)}</TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {totalExpense > 0 ? ((tag.total / totalExpense) * 100).toFixed(1) : 0}%
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );

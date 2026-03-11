@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ export default function CategoriesPage() {
   const [formName, setFormName] = useState("");
   const [formColor, setFormColor] = useState(presetColors[0]);
   const [formParentId, setFormParentId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export default function CategoriesPage() {
       .eq("organization_id", currentOrg!.id)
       .order("name");
     setCategories((data as Category[]) ?? []);
+    setLoading(false);
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -201,6 +204,23 @@ export default function CategoriesPage() {
         </DialogContent>
       </Dialog>
 
+      {loading ? (
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-6 w-24" />
+                  <div className="flex gap-1">
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-8" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {topLevel.map((cat) => {
           const catChildren = getChildren(cat.id);
@@ -329,6 +349,7 @@ export default function CategoriesPage() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
