@@ -39,6 +39,13 @@ interface Transaction {
   description: string;
   date: string;
   cash_account_id: string;
+  category_id: string | null;
+}
+
+interface CategorySummary {
+  name: string;
+  color: string;
+  total: number;
 }
 
 interface TagSummary {
@@ -65,6 +72,7 @@ export default function ReportsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<{ id: string; name: string }[]>([]);
   const [tags, setTags] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; icon: string | null }[]>([]);
   const [txnTagMap, setTxnTagMap] = useState<Map<string, string[]>>(new Map());
   const [loading, setLoading] = useState(true);
 
@@ -81,10 +89,10 @@ export default function ReportsPage() {
       ? `${year + 1}-01-01`
       : `${year}-${String(month + 2).padStart(2, "0")}-01`;
 
-    const [txnRes, accountsRes, tagsRes] = await Promise.all([
+    const [txnRes, accountsRes, tagsRes, categoriesRes] = await Promise.all([
       supabase
         .from("transactions")
-        .select("id, amount, type, description, date, cash_account_id")
+        .select("id, amount, type, description, date, cash_account_id, category_id")
         .eq("organization_id", orgId)
         .gte("date", startDate)
         .lt("date", endDate)
@@ -97,12 +105,17 @@ export default function ReportsPage() {
         .from("tags")
         .select("id, name, color")
         .eq("organization_id", orgId),
+      supabase
+        .from("categories")
+        .select("id, name, icon")
+        .eq("organization_id", orgId),
     ]);
 
     const txns = (txnRes.data as Transaction[]) ?? [];
     setTransactions(txns);
     setAccounts((accountsRes.data as { id: string; name: string }[]) ?? []);
     setTags((tagsRes.data as { id: string; name: string; color: string }[]) ?? []);
+    setCategories((categoriesRes.data as { id: string; name: string; icon: string | null }[]) ?? []);
 
     // Load tag mappings
     const txnIds = txns.map((t) => t.id);
@@ -204,6 +217,28 @@ export default function ReportsPage() {
     return result;
   }, [transactions, accounts]);
 
+  // Category breakdown
+  const categorySummary = useMemo(() => {
+    const totals = new Map<string, number>();
+    transactions
+      .filter((t) => t.type === "expense")
+      .forEach((t) => {
+        const key = t.category_id ?? "__none__";
+        totals.set(key, (totals.get(key) ?? 0) + Math.abs(t.amount));
+      });
+
+    const result: CategorySummary[] = [];
+    totals.forEach((total, catId) => {
+      if (catId === "__none__") {
+        result.push({ name: "Sem categoria", color: "#6b7280", total });
+      } else {
+        const cat = categories.find((c) => c.id === catId);
+        if (cat) result.push({ name: cat.name, color: cat.icon ?? "#6366f1", total });
+      }
+    });
+    return result.sort((a, b) => b.total - a.total);
+  }, [transactions, categories]);
+
   function prevMonth() {
     if (month === 0) {
       setYear((y) => y - 1);
@@ -241,6 +276,14 @@ export default function ReportsPage() {
     tagSummary.forEach((tag) => {
       const pct = totalExpense > 0 ? ((tag.total / totalExpense) * 100).toFixed(1) : "0";
       lines.push(`"${tag.name.replace(/"/g, '""')}",${tag.total},${pct}%`);
+    });
+
+    lines.push("");
+    lines.push("=== Resumo por Categoria ===");
+    lines.push("Categoria,Total Despesas,% do Total");
+    categorySummary.forEach((cat) => {
+      const pct = totalExpense > 0 ? ((cat.total / totalExpense) * 100).toFixed(1) : "0";
+      lines.push(`"${cat.name.replace(/"/g, '""')}",${cat.total},${pct}%`);
     });
 
     lines.push("");
@@ -449,6 +492,76 @@ export default function ReportsPage() {
                           <TableCell className="text-right text-red-500">{formatCurrency(a.expense)}</TableCell>
                           <TableCell className={`text-right font-medium ${a.net >= 0 ? "text-green-500" : "text-red-500"}`}>
                             {formatCurrency(a.net)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Category breakdown */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {categorySummary.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">Despesas por Categoria</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={categorySummary}
+                          dataKey="total"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
+                        >
+                          {categorySummary.map((entry, i) => (
+                            <Cell key={i} fill={entry.color || COLORS[i % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {categorySummary.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">Detalhamento por Categoria</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead className="text-right">Total Despesas</TableHead>
+                        <TableHead className="text-right">% do Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {categorySummary.map((cat) => (
+                        <TableRow key={cat.name}>
+                          <TableCell>
+                            <Badge
+                              variant="secondary"
+                              style={{ backgroundColor: cat.color + "20", color: cat.color }}
+                            >
+                              {cat.name}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-mono">{formatCurrency(cat.total)}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {totalExpense > 0 ? ((cat.total / totalExpense) * 100).toFixed(1) : 0}%
                           </TableCell>
                         </TableRow>
                       ))}
