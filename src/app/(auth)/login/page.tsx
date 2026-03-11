@@ -14,12 +14,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setEmailNotConfirmed(false);
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -29,7 +33,8 @@ export default function LoginPage() {
 
     if (error) {
       if (error.message.includes("Email not confirmed")) {
-        setError("Email ainda não confirmado. Verifique sua caixa de entrada e clique no link de confirmação.");
+        setEmailNotConfirmed(true);
+        setError("Email ainda não confirmado. Verifique sua caixa de entrada.");
       } else {
         setError(error.message);
       }
@@ -38,6 +43,20 @@ export default function LoginPage() {
     }
 
     router.push("/dashboard");
+  }
+
+  async function handleResendConfirmation() {
+    setResendLoading(true);
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (typeof window !== "undefined" ? window.location.origin : "");
+    await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${siteUrl}/auth/callback` },
+    });
+    setResendSent(true);
+    setResendLoading(false);
   }
 
   return (
@@ -72,7 +91,26 @@ export default function LoginPage() {
               />
             </div>
             {error && (
-              <p className="text-sm text-red-500">{error}</p>
+              <div className="space-y-2">
+                <p className="text-sm text-red-500">{error}</p>
+                {emailNotConfirmed && !resendSent && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleResendConfirmation}
+                    disabled={resendLoading}
+                  >
+                    {resendLoading ? "Enviando..." : "Reenviar email de confirmação"}
+                  </Button>
+                )}
+                {resendSent && (
+                  <p className="text-sm text-green-500">
+                    Email reenviado! Verifique sua caixa de entrada.
+                  </p>
+                )}
+              </div>
             )}
             <div className="flex justify-end">
               <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">

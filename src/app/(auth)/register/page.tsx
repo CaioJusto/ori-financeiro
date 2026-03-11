@@ -30,11 +30,16 @@ export default function RegisterPage() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (typeof window !== "undefined" ? window.location.origin : "");
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { org_name: orgName, org_slug: slug },
+        emailRedirectTo: `${siteUrl}/auth/callback`,
       },
     });
 
