@@ -24,11 +24,12 @@ const OrgContext = createContext<OrgContextType>({
   loading: true,
 });
 
+const supabase = createClient();
+
 function SetupOrg({ onCreated }: { onCreated: () => void }) {
   const [orgName, setOrgName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
-  const supabase = createClient();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -112,7 +113,6 @@ export function OrgProvider({ children }: { children: ReactNode }) {
   const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [noOrgs, setNoOrgs] = useState(false);
-  const supabase = createClient();
 
   const loadOrgs = useCallback(async () => {
     const { data: raw } = await supabase.from("organizations").select("*");
@@ -127,7 +127,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       setNoOrgs(true);
     }
     setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     loadOrgs();

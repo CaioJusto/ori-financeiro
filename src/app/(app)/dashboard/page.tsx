@@ -66,6 +66,8 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   );
 }
 
+const supabase = createClient();
+
 export default function DashboardPage() {
   const { currentOrg } = useOrg();
   const [stats, setStats] = useState<DashboardStats>({
@@ -76,7 +78,6 @@ export default function DashboardPage() {
   });
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [accountBalances, setAccountBalances] = useState<AccountBalance[]>([]);
-  const supabase = createClient();
 
   useEffect(() => {
     if (!currentOrg) return;
@@ -167,7 +168,7 @@ export default function DashboardPage() {
     }
 
     loadStats();
-  }, [currentOrg, supabase]);
+  }, [currentOrg]);
 
   const netChange = stats.incomeThisMonth - stats.expenseThisMonth;
 
