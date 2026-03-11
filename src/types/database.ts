@@ -318,7 +318,12 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_org_member_emails: {
+        Args: { org_id: string };
+        Returns: { user_id: string; email: string }[];
+      };
+    };
     Enums: {
       account_type: "personal" | "company" | "cash2";
       invitation_status: "pending" | "accepted" | "expired";

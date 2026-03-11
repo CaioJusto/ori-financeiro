@@ -28,6 +28,7 @@ interface Member {
   id: string;
   role: "owner" | "admin" | "member";
   user_id: string;
+  email?: string;
 }
 
 interface Invitation {
@@ -44,6 +45,7 @@ export default function SettingsPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -51,6 +53,12 @@ export default function SettingsPage() {
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
   const [inviteError, setInviteError] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const supabase = createClient();
 
   const isAdmin = currentUserRole === "owner" || currentUserRole === "admin";
@@ -59,14 +67,33 @@ export default function SettingsPage() {
     if (!currentOrg) return;
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) setCurrentUserId(user.id);
+    if (user) {
+      setCurrentUserId(user.id);
+      setCurrentUserEmail(user.email ?? null);
+    }
 
     const { data: membersData } = await supabase
       .from("org_members")
       .select("id, role, user_id")
       .eq("organization_id", currentOrg.id);
     const membersList = (membersData as Member[]) ?? [];
-    setMembers(membersList);
+
+    // Try to fetch member emails via RPC
+    const { data: emailsData } = await supabase.rpc("get_org_member_emails", {
+      org_id: currentOrg.id,
+    });
+    const emailMap = new Map<string, string>();
+    if (emailsData) {
+      for (const row of emailsData as { user_id: string; email: string }[]) {
+        emailMap.set(row.user_id, row.email);
+      }
+    }
+
+    const membersWithEmails = membersList.map((m) => ({
+      ...m,
+      email: emailMap.get(m.user_id),
+    }));
+    setMembers(membersWithEmails);
 
     if (user) {
       const me = membersList.find((m) => m.user_id === user.id);
@@ -97,6 +124,38 @@ export default function SettingsPage() {
       .update({ name: orgName })
       .eq("id", currentOrg.id);
     setSaving(false);
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (newPassword.length < 6) {
+      setPasswordError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("As senhas não coincidem.");
+      return;
+    }
+
+    setPasswordLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setPasswordLoading(false);
+
+    if (error) {
+      setPasswordError(error.message);
+      return;
+    }
+
+    setPasswordSuccess("Senha alterada com sucesso.");
+    setNewPassword("");
+    setConfirmPassword("");
+    setTimeout(() => {
+      setPasswordOpen(false);
+      setPasswordSuccess("");
+    }, 1500);
   }
 
   async function handleInvite(e: React.FormEvent) {
@@ -160,8 +219,77 @@ export default function SettingsPage() {
     <div className="max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Configurações</h1>
-        <p className="text-muted-foreground">Gerencie sua organização</p>
+        <p className="text-muted-foreground">Gerencie seu perfil e organização</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Perfil</CardTitle>
+          <CardDescription>Informações da sua conta</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <Input value={currentUserEmail ?? ""} disabled />
+          </div>
+          <div className="flex items-center gap-3">
+            <Dialog open={passwordOpen} onOpenChange={(open) => {
+              setPasswordOpen(open);
+              if (!open) {
+                setNewPassword("");
+                setConfirmPassword("");
+                setPasswordError("");
+                setPasswordSuccess("");
+              }
+            }}>
+              <DialogTrigger render={<Button variant="outline" size="sm" />}>
+                Alterar Senha
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Alterar Senha</DialogTitle>
+                  <DialogDescription>
+                    Digite sua nova senha abaixo.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">Nova Senha</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      placeholder="Mínimo 6 caracteres"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirmar Senha</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      placeholder="Repita a nova senha"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  {passwordError && (
+                    <p className="text-sm text-red-500">{passwordError}</p>
+                  )}
+                  {passwordSuccess && (
+                    <p className="text-sm text-green-500">{passwordSuccess}</p>
+                  )}
+                  <Button type="submit" className="w-full" disabled={passwordLoading}>
+                    {passwordLoading ? "Alterando..." : "Alterar Senha"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -243,8 +371,8 @@ export default function SettingsPage() {
           {members.map((member) => (
             <div key={member.id} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-mono">
-                  {member.user_id.slice(0, 8)}...
+                <span className="text-sm">
+                  {member.email ?? member.user_id.slice(0, 8) + "..."}
                 </span>
                 {member.user_id === currentUserId && (
                   <Badge variant="outline" className="text-xs">você</Badge>
