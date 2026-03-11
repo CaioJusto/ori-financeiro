@@ -44,7 +44,19 @@ export default function RegisterPage() {
     });
 
     if (authError) {
-      setError(authError.message);
+      if (
+        authError.message.includes("rate limit") ||
+        authError.message.includes("over_email_send_rate_limit") ||
+        authError.status === 429
+      ) {
+        setError(
+          "Limite de emails do servidor atingido. Aguarde alguns minutos e tente novamente. Se o problema persistir, entre em contato com o suporte."
+        );
+      } else if (authError.message.includes("already registered") || authError.message.includes("already been registered")) {
+        setError("Este email já está cadastrado. Tente fazer login ou recuperar sua senha.");
+      } else {
+        setError(authError.message);
+      }
       setLoading(false);
       return;
     }
@@ -101,13 +113,22 @@ export default function RegisterPage() {
             <CardTitle className="text-2xl font-bold">Verifique seu Email</CardTitle>
             <CardDescription>
               Enviamos um link de confirmação para <strong>{email}</strong>.
-              Clique no link no email para ativar sua conta.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-sm text-muted-foreground mb-4">
-              Após confirmar, faça login para configurar sua organização.
+          <CardContent className="space-y-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              Clique no link no email para ativar sua conta.
             </p>
+            <div className="rounded-md bg-yellow-500/10 border border-yellow-500/20 p-3 text-left">
+              <p className="text-xs text-yellow-700 dark:text-yellow-400 font-medium mb-1">
+                📬 Não recebeu o email?
+              </p>
+              <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                <li>Verifique a pasta de <strong>Spam / Lixo eletrônico</strong></li>
+                <li>O email pode levar até 5 minutos para chegar</li>
+                <li>Se ainda não chegou, clique em &quot;Ir para Login&quot; e use o botão de reenvio</li>
+              </ul>
+            </div>
             <Link href="/login">
               <Button variant="outline" className="w-full">Ir para Login</Button>
             </Link>

@@ -50,12 +50,16 @@ export default function LoginPage() {
     const siteUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
       (typeof window !== "undefined" ? window.location.origin : "");
-    await supabase.auth.resend({
+    const { error: resendError } = await supabase.auth.resend({
       type: "signup",
       email,
       options: { emailRedirectTo: `${siteUrl}/auth/callback` },
     });
-    setResendSent(true);
+    if (resendError && (resendError.message.includes("rate limit") || resendError.status === 429)) {
+      setError("Limite de emails atingido. Aguarde alguns minutos e tente novamente.");
+    } else {
+      setResendSent(true);
+    }
     setResendLoading(false);
   }
 
