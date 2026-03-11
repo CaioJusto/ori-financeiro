@@ -23,6 +23,7 @@ import {
 import { useOrg } from "@/contexts/org-context";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plus,
   ArrowUpRight,
@@ -35,7 +36,7 @@ import {
 } from "lucide-react";
 import type { Database } from "@/types/database";
 
-type Category = { id: string; name: string; icon: string | null };
+type Category = { id: string; name: string; color: string | null };
 
 type RecurringTransaction =
   Database["public"]["Tables"]["recurring_transactions"]["Row"] & {
@@ -69,6 +70,7 @@ export default function RecurringPage() {
     { id: string; name: string; color: string }[]
   >([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<RecurringTransaction | null>(
@@ -96,6 +98,7 @@ export default function RecurringPage() {
   }, [currentOrg]);
 
   async function loadData() {
+    setLoading(true);
     const orgId = currentOrg!.id;
 
     const [accountsRes, tagsRes, categoriesRes] = await Promise.all([
@@ -109,7 +112,7 @@ export default function RecurringPage() {
         .eq("organization_id", orgId),
       supabase
         .from("categories")
-        .select("id, name, icon")
+        .select("id, name, color")
         .eq("organization_id", orgId)
         .order("name"),
     ]);
@@ -132,7 +135,7 @@ export default function RecurringPage() {
     // Load recurring transactions
     const { data: recRaw } = await supabase
       .from("recurring_transactions")
-      .select("*, cash_accounts(name), categories(id, name, icon)")
+      .select("*, cash_accounts(name), categories(id, name, color)")
       .eq("organization_id", orgId)
       .order("next_date", { ascending: true });
 
@@ -140,7 +143,7 @@ export default function RecurringPage() {
       (recRaw as
         | (Database["public"]["Tables"]["recurring_transactions"]["Row"] & {
             cash_accounts: { name: string } | null;
-            categories: { id: string; name: string; icon: string | null } | null;
+            categories: { id: string; name: string; color: string | null } | null;
           })[]
         | null) ?? [];
 
@@ -176,6 +179,7 @@ export default function RecurringPage() {
     }));
 
     setItems(enriched);
+    setLoading(false);
   }
 
   function resetForm() {
@@ -583,7 +587,21 @@ export default function RecurringPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item) => {
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-36" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                </TableRow>
+              ))
+            ) : items.map((item) => {
               const config = typeConfig[item.type];
               const Icon = config.icon;
               return (
@@ -622,8 +640,8 @@ export default function RecurringPage() {
                         variant="secondary"
                         style={{
                           backgroundColor:
-                            (item.category.icon ?? "#6366f1") + "20",
-                          color: item.category.icon ?? "#6366f1",
+                            (item.category.color ?? "#6366f1") + "20",
+                          color: item.category.color ?? "#6366f1",
                         }}
                         className="text-xs"
                       >
@@ -689,7 +707,7 @@ export default function RecurringPage() {
                 </TableRow>
               );
             })}
-            {items.length === 0 && (
+            {!loading && items.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={9}
