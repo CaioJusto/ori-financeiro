@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/table";
 import { useOrg } from "@/contexts/org-context";
 import { createClient } from "@/lib/supabase/client";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatCurrencyShort } from "@/lib/format";
+import { CustomTooltip } from "@/components/chart-tooltip";
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import {
   BarChart,
@@ -54,29 +55,6 @@ interface AccountSummary {
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
 const MONTH_NAMES = ["Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
-function formatCurrencyShort(cents: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
-
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number; name: string; color: string }[]; label?: string }) {
-  if (!active || !payload) return null;
-  return (
-    <div className="rounded-md border bg-popover p-3 text-popover-foreground shadow-md text-sm">
-      <p className="font-medium mb-1">{label}</p>
-      {payload.map((entry, i) => (
-        <p key={i} style={{ color: entry.color }}>
-          {entry.name}: {formatCurrency(entry.value)}
-        </p>
-      ))}
-    </div>
-  );
-}
 
 export default function ReportsPage() {
   const { currentOrg } = useOrg();
