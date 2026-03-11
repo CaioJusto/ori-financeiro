@@ -16,6 +16,7 @@ import {
 import { useOrg } from "@/contexts/org-context";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency } from "@/lib/format";
+import { toast } from "sonner";
 import { Plus, Wallet, Building2, Banknote, Pencil, Trash2 } from "lucide-react";
 import type { Database } from "@/types/database";
 
@@ -67,12 +68,14 @@ export default function AccountsPage() {
     e.preventDefault();
     if (!currentOrg) return;
 
-    await supabase.from("cash_accounts").insert({
+    const { error } = await supabase.from("cash_accounts").insert({
       organization_id: currentOrg.id,
       name: formName,
       type: formType,
     });
 
+    if (error) { toast.error("Erro ao criar conta", { description: error.message }); return; }
+    toast.success("Conta criada com sucesso!");
     setFormName("");
     setFormType("personal");
     setDialogOpen(false);
@@ -90,11 +93,13 @@ export default function AccountsPage() {
     e.preventDefault();
     if (!editingAccount) return;
 
-    await supabase
+    const { error } = await supabase
       .from("cash_accounts")
       .update({ name: formName, type: formType })
       .eq("id", editingAccount.id);
 
+    if (error) { toast.error("Erro ao editar conta", { description: error.message }); return; }
+    toast.success("Conta atualizada com sucesso!");
     setEditOpen(false);
     setEditingAccount(null);
     setFormName("");
@@ -138,7 +143,9 @@ export default function AccountsPage() {
       }
     }
 
-    await supabase.from("cash_accounts").delete().eq("id", account.id);
+    const { error } = await supabase.from("cash_accounts").delete().eq("id", account.id);
+    if (error) { toast.error("Erro ao excluir conta", { description: error.message }); return; }
+    toast.success("Conta excluída com sucesso!");
     loadAccounts();
   }
 
@@ -277,8 +284,16 @@ export default function AccountsPage() {
         })}
 
         {accounts.length === 0 && (
-          <div className="col-span-full text-center py-12 text-muted-foreground">
-            Nenhuma conta encontrada. Crie sua primeira conta.
+          <div className="col-span-full flex flex-col items-center justify-center py-16 text-center gap-4">
+            <Wallet className="h-12 w-12 text-muted-foreground/30" />
+            <div>
+              <p className="text-sm font-medium">Nenhuma conta cadastrada</p>
+              <p className="text-xs text-muted-foreground mt-1">Crie sua primeira conta para começar</p>
+            </div>
+            <Button size="sm" onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Conta
+            </Button>
           </div>
         )}
       </div>

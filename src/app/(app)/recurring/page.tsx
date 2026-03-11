@@ -23,6 +23,7 @@ import {
 import { useOrg } from "@/contexts/org-context";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plus,
@@ -242,6 +243,7 @@ export default function RecurringPage() {
       );
     }
 
+    toast.success("Recorrência criada com sucesso!");
     resetForm();
     setDialogOpen(false);
     loadData();
@@ -312,6 +314,7 @@ export default function RecurringPage() {
       );
     }
 
+    toast.success("Recorrência atualizada com sucesso!");
     setEditOpen(false);
     setEditingItem(null);
     resetForm();
@@ -319,12 +322,11 @@ export default function RecurringPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Tem certeza que deseja excluir esta recorrencia?")) return;
-    await supabase
-      .from("recurring_transaction_tags")
-      .delete()
-      .eq("recurring_transaction_id", id);
-    await supabase.from("recurring_transactions").delete().eq("id", id);
+    if (!confirm("Tem certeza que deseja excluir esta recorrência?")) return;
+    await supabase.from("recurring_transaction_tags").delete().eq("recurring_transaction_id", id);
+    const { error } = await supabase.from("recurring_transactions").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir recorrência", { description: error.message }); return; }
+    toast.success("Recorrência excluída com sucesso!");
     loadData();
   }
 

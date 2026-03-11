@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { useOrg } from "@/contexts/org-context";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 import { Plus, Pencil, Trash2, FolderTree } from "lucide-react";
 import type { Database } from "@/types/database";
 
@@ -58,13 +59,15 @@ export default function CategoriesPage() {
     e.preventDefault();
     if (!currentOrg) return;
 
-    await supabase.from("categories").insert({
+    const { error } = await supabase.from("categories").insert({
       organization_id: currentOrg.id,
       name: formName,
       icon: formColor,
       parent_id: formParentId || null,
     });
 
+    if (error) { toast.error("Erro ao criar categoria", { description: error.message }); return; }
+    toast.success("Categoria criada com sucesso!");
     resetForm();
     setCreateOpen(false);
     loadCategories();
@@ -74,7 +77,7 @@ export default function CategoriesPage() {
     e.preventDefault();
     if (!editingCategory) return;
 
-    await supabase
+    const { error } = await supabase
       .from("categories")
       .update({
         name: formName,
@@ -83,6 +86,8 @@ export default function CategoriesPage() {
       })
       .eq("id", editingCategory.id);
 
+    if (error) { toast.error("Erro ao editar categoria", { description: error.message }); return; }
+    toast.success("Categoria atualizada com sucesso!");
     resetForm();
     setEditOpen(false);
     setEditingCategory(null);
@@ -91,7 +96,9 @@ export default function CategoriesPage() {
 
   async function handleDelete(id: string) {
     if (!confirm("Tem certeza que deseja excluir esta categoria?")) return;
-    await supabase.from("categories").delete().eq("id", id);
+    const { error } = await supabase.from("categories").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir categoria", { description: error.message }); return; }
+    toast.success("Categoria excluída com sucesso!");
     loadCategories();
   }
 

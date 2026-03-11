@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dialog";
 import { useOrg } from "@/contexts/org-context";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, Tag } from "lucide-react";
 import type { Database } from "@/types/database";
 
 type Tag = Database["public"]["Tables"]["tags"]["Row"];
@@ -60,12 +61,14 @@ export default function TagsPage() {
     e.preventDefault();
     if (!currentOrg) return;
 
-    await supabase.from("tags").insert({
+    const { error } = await supabase.from("tags").insert({
       organization_id: currentOrg.id,
       name: formName,
       color: formColor,
     });
 
+    if (error) { toast.error("Erro ao criar tag", { description: error.message }); return; }
+    toast.success("Tag criada com sucesso!");
     resetForm();
     setCreateOpen(false);
     loadTags();
@@ -75,7 +78,7 @@ export default function TagsPage() {
     e.preventDefault();
     if (!editingTag) return;
 
-    await supabase
+    const { error } = await supabase
       .from("tags")
       .update({
         name: formName,
@@ -83,6 +86,8 @@ export default function TagsPage() {
       })
       .eq("id", editingTag.id);
 
+    if (error) { toast.error("Erro ao editar tag", { description: error.message }); return; }
+    toast.success("Tag atualizada com sucesso!");
     resetForm();
     setEditOpen(false);
     setEditingTag(null);
@@ -90,7 +95,9 @@ export default function TagsPage() {
   }
 
   async function handleDelete(id: string) {
-    await supabase.from("tags").delete().eq("id", id);
+    const { error } = await supabase.from("tags").delete().eq("id", id);
+    if (error) { toast.error("Erro ao excluir tag", { description: error.message }); return; }
+    toast.success("Tag excluída com sucesso!");
     loadTags();
   }
 
@@ -237,8 +244,16 @@ export default function TagsPage() {
         ))}
 
         {tags.length === 0 && (
-          <div className="col-span-full text-center py-12 text-muted-foreground">
-            Nenhuma tag criada. Tags ajudam a organizar suas transações.
+          <div className="col-span-full flex flex-col items-center justify-center py-16 text-center gap-4">
+            <Tag className="h-12 w-12 text-muted-foreground/30" />
+            <div>
+              <p className="text-sm font-medium">Nenhuma tag criada ainda</p>
+              <p className="text-xs text-muted-foreground mt-1">Tags ajudam a organizar suas transações</p>
+            </div>
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Tag
+            </Button>
           </div>
         )}
       </div>
