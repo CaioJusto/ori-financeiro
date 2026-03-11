@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +33,9 @@ export default function TagsPage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [deletingTag, setDeletingTag] = useState<Tag | null>(null);
   const [formName, setFormName] = useState("");
   const [formColor, setFormColor] = useState(presetColors[0]);
   const [loading, setLoading] = useState(true);
@@ -173,6 +176,15 @@ export default function TagsPage() {
         </DialogContent>
       </Dialog>
 
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={(open) => { setDeleteOpen(open); if (!open) setDeletingTag(null); }}
+        title="Excluir Tag"
+        description={`Tem certeza que deseja excluir a tag "${deletingTag?.name ?? ""}"? Essa ação não pode ser desfeita.`}
+        confirmLabel="Excluir"
+        onConfirm={() => { if (deletingTag) handleDelete(deletingTag.id); setDeletingTag(null); }}
+      />
+
       {loading ? (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -215,7 +227,7 @@ export default function TagsPage() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-muted-foreground hover:text-red-500"
-                  onClick={() => handleDelete(tag.id)}
+                  onClick={() => { setDeletingTag(tag); setDeleteOpen(true); }}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
