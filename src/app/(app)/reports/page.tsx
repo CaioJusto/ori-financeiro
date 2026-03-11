@@ -222,6 +222,43 @@ export default function ReportsPage() {
     }
   }
 
+  function exportCSV() {
+    const monthLabel = `${MONTH_NAMES[month]}_${year}`;
+    const lines: string[] = [];
+
+    // Transactions
+    lines.push("=== Transacoes ===");
+    lines.push("Data,Descricao,Tipo,Valor,Conta");
+    transactions.forEach((t) => {
+      const accountName = accounts.find((a) => a.id === t.cash_account_id)?.name ?? "";
+      const typeLabel = t.type === "income" ? "Receita" : t.type === "expense" ? "Despesa" : "Transferencia";
+      lines.push(`${t.date},"${t.description.replace(/"/g, '""')}",${typeLabel},${t.amount},"${accountName.replace(/"/g, '""')}"`);
+    });
+
+    lines.push("");
+    lines.push("=== Resumo por Tag ===");
+    lines.push("Tag,Total Despesas,% do Total");
+    tagSummary.forEach((tag) => {
+      const pct = totalExpense > 0 ? ((tag.total / totalExpense) * 100).toFixed(1) : "0";
+      lines.push(`"${tag.name.replace(/"/g, '""')}",${tag.total},${pct}%`);
+    });
+
+    lines.push("");
+    lines.push("=== Resumo por Conta ===");
+    lines.push("Conta,Receitas,Despesas,Resultado");
+    accountSummary.forEach((a) => {
+      lines.push(`"${a.name.replace(/"/g, '""')}",${a.income},${a.expense},${a.net}`);
+    });
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `relatorio_${monthLabel}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -238,6 +275,10 @@ export default function ReportsPage() {
           </span>
           <Button variant="outline" size="icon" onClick={nextMonth}>
             <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" onClick={exportCSV} disabled={loading || transactions.length === 0}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar CSV
           </Button>
         </div>
       </div>
