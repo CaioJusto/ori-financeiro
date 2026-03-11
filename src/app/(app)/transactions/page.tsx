@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,10 +75,48 @@ export default function TransactionsPage() {
 
   const supabase = createClient();
 
+  // Debounced search for server-side queries
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [filterType, filterAccount, filterCategory, filterTag, debouncedSearch, dateFrom, dateTo]);
+
   useEffect(() => {
     if (!currentOrg) return;
     loadData();
-  }, [currentOrg, filterTag, page]);
+  }, [currentOrg, filterType, filterAccount, filterCategory, filterTag, debouncedSearch, dateFrom, dateTo, page]);
+
+  // Apply all active filters to a Supabase query builder
+  function applyFilters(query: ReturnType<typeof supabase.from>, tagTxnIds: string[] | null) {
+    if (filterType) {
+      query = query.eq("type", filterType);
+    }
+    if (filterAccount) {
+      query = query.eq("cash_account_id", filterAccount);
+    }
+    if (filterCategory) {
+      query = query.eq("category_id", filterCategory);
+    }
+    if (debouncedSearch.trim()) {
+      query = query.ilike("description", `%${debouncedSearch.trim()}%`);
+    }
+    if (dateFrom) {
+      query = query.gte("date", dateFrom);
+    }
+    if (dateTo) {
+      query = query.lte("date", dateTo);
+    }
+    if (tagTxnIds !== null) {
+      query = query.in("id", tagTxnIds.length > 0 ? tagTxnIds : ["__none__"]);
+    }
+    return query;
+  }
 
   async function loadData() {
     const orgId = currentOrg!.id;
@@ -97,24 +135,38 @@ export default function TransactionsPage() {
       setForm((f) => ({ ...f, cash_account_id: (accountsRes.data as { id: string }[])[0].id }));
     }
 
+    // If tag filter is active, get matching transaction IDs first
+    let tagTxnIds: string[] | null = null;
+    if (filterTag) {
+      const { data: tagMatches } = await supabase
+        .from("transaction_tags")
+        .select("transaction_id")
+        .eq("tag_id", filterTag);
+      tagTxnIds = (tagMatches as { transaction_id: string }[] | null)?.map((t) => t.transaction_id) ?? [];
+    }
+
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
-    // Get total count
-    const { count } = await supabase
+    // Get filtered count
+    let countQuery = supabase
       .from("transactions")
       .select("*", { count: "exact", head: true })
       .eq("organization_id", orgId);
+    countQuery = applyFilters(countQuery, tagTxnIds);
+    const { count } = await countQuery;
     setTotalCount(count ?? 0);
 
-    let query = supabase
+    // Get filtered + paginated data
+    let dataQuery = supabase
       .from("transactions")
       .select("*, cash_accounts(name), categories(id, name, icon)")
       .eq("organization_id", orgId)
       .order("date", { ascending: false })
       .range(from, to);
+    dataQuery = applyFilters(dataQuery, tagTxnIds);
 
-    const { data: txnsRaw } = await query;
+    const { data: txnsRaw } = await dataQuery;
     const txns = txnsRaw as (Database["public"]["Tables"]["transactions"]["Row"] & { cash_accounts: { name: string } | null; categories: { id: string; name: string; icon: string | null } | null })[] | null;
 
     if (txns) {
@@ -141,43 +193,10 @@ export default function TransactionsPage() {
       }));
 
       setTransactions(enriched);
+    } else {
+      setTransactions([]);
     }
   }
-
-  // Client-side filtering
-  const filteredTransactions = useMemo(() => {
-    let result = transactions;
-
-    if (filterTag) {
-      result = result.filter((t) => t.tags.some((tag) => tag.id === filterTag));
-    }
-    if (filterType) {
-      result = result.filter((t) => t.type === filterType);
-    }
-    if (filterAccount) {
-      result = result.filter((t) => t.cash_account_id === filterAccount);
-    }
-    if (filterCategory) {
-      result = result.filter((t) => t.category_id === filterCategory);
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (t) =>
-          t.description.toLowerCase().includes(q) ||
-          t.cash_accounts?.name.toLowerCase().includes(q) ||
-          t.tags.some((tag) => tag.name.toLowerCase().includes(q))
-      );
-    }
-    if (dateFrom) {
-      result = result.filter((t) => t.date >= dateFrom);
-    }
-    if (dateTo) {
-      result = result.filter((t) => t.date <= dateTo);
-    }
-
-    return result;
-  }, [transactions, filterTag, filterType, filterAccount, filterCategory, searchQuery, dateFrom, dateTo]);
 
   const hasActiveFilters = filterTag || filterType || filterAccount || filterCategory || searchQuery || dateFrom || dateTo;
 
@@ -192,16 +211,16 @@ export default function TransactionsPage() {
     setPage(0);
   }
 
-  // Summary of filtered results
-  const summary = useMemo(() => {
-    const income = filteredTransactions
+  // Summary of current page results
+  const summary = (() => {
+    const income = transactions
       .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
-    const expense = filteredTransactions
+    const expense = transactions
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-    return { income, expense, net: income - expense, count: filteredTransactions.length };
-  }, [filteredTransactions]);
+    return { income, expense, net: income - expense };
+  })();
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -212,22 +231,23 @@ export default function TransactionsPage() {
 
     const amountCents = Math.round(parseFloat(form.amount) * 100);
 
-    const { data: txnRaw } = await supabase
-      .from("transactions")
-      .insert({
+    const insertPayload = {
         organization_id: currentOrg.id,
         cash_account_id: form.cash_account_id,
-        destination_account_id:
-          form.type === "transfer" && form.destination_account_id
-            ? form.destination_account_id
-            : null,
         amount: form.type === "expense" ? -amountCents : amountCents,
         type: form.type,
         description: form.description,
         date: form.date,
         created_by: user.id,
         category_id: form.category_id || null,
-      })
+        ...(form.type === "transfer" && form.destination_account_id
+          ? { destination_account_id: form.destination_account_id }
+          : {}),
+    };
+
+    const { data: txnRaw } = await supabase
+      .from("transactions")
+      .insert(insertPayload)
       .select()
       .single();
     const txn = txnRaw as Database["public"]["Tables"]["transactions"]["Row"] | null;
@@ -291,10 +311,6 @@ export default function TransactionsPage() {
       .from("transactions")
       .update({
         cash_account_id: form.cash_account_id,
-        destination_account_id:
-          form.type === "transfer" && form.destination_account_id
-            ? form.destination_account_id
-            : null,
         amount: form.type === "expense" ? -amountCents : amountCents,
         type: form.type,
         description: form.description,
@@ -767,7 +783,7 @@ export default function TransactionsPage() {
       {/* Summary bar */}
       <div className="flex items-center gap-6 text-sm">
         <span className="text-muted-foreground">
-          {summary.count} transacoes{totalCount > PAGE_SIZE ? ` (pagina ${page + 1})` : ""}
+          {totalCount} transacoes{totalCount > PAGE_SIZE ? ` (pagina ${page + 1} de ${Math.ceil(totalCount / PAGE_SIZE)})` : ""}
         </span>
         <span className="text-green-500">Receitas: {formatCurrency(summary.income)}</span>
         <span className="text-red-500">Despesas: {formatCurrency(summary.expense)}</span>
@@ -790,7 +806,7 @@ export default function TransactionsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTransactions.map((txn) => {
+            {transactions.map((txn) => {
               const config = typeConfig[txn.type];
               const Icon = config.icon;
               return (
@@ -861,7 +877,7 @@ export default function TransactionsPage() {
                 </TableRow>
               );
             })}
-            {filteredTransactions.length === 0 && (
+            {transactions.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhuma transacao encontrada.
