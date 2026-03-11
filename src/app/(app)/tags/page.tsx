@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { useOrg } from "@/contexts/org-context";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import type { Database } from "@/types/database";
 
 type Tag = Database["public"]["Tables"]["tags"]["Row"];
@@ -29,9 +29,11 @@ const presetColors = [
 export default function TagsPage() {
   const { currentOrg } = useOrg();
   const [tags, setTags] = useState<Tag[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newColor, setNewColor] = useState(presetColors[0]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [formName, setFormName] = useState("");
+  const [formColor, setFormColor] = useState(presetColors[0]);
   const supabase = createClient();
 
   useEffect(() => {
@@ -54,19 +56,85 @@ export default function TagsPage() {
 
     await supabase.from("tags").insert({
       organization_id: currentOrg.id,
-      name: newName,
-      color: newColor,
+      name: formName,
+      color: formColor,
     });
 
-    setNewName("");
-    setNewColor(presetColors[0]);
-    setDialogOpen(false);
+    resetForm();
+    setCreateOpen(false);
+    loadTags();
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingTag) return;
+
+    await supabase
+      .from("tags")
+      .update({
+        name: formName,
+        color: formColor,
+      })
+      .eq("id", editingTag.id);
+
+    resetForm();
+    setEditOpen(false);
+    setEditingTag(null);
     loadTags();
   }
 
   async function handleDelete(id: string) {
     await supabase.from("tags").delete().eq("id", id);
     loadTags();
+  }
+
+  function openEdit(tag: Tag) {
+    setEditingTag(tag);
+    setFormName(tag.name);
+    setFormColor(tag.color);
+    setEditOpen(true);
+  }
+
+  function resetForm() {
+    setFormName("");
+    setFormColor(presetColors[0]);
+  }
+
+  function TagForm({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void; submitLabel: string }) {
+    return (
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label>Nome</Label>
+          <Input
+            value={formName}
+            onChange={(e) => setFormName(e.target.value)}
+            placeholder="Ex: Marketing, Fornecedor..."
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Cor</Label>
+          <div className="flex flex-wrap gap-2">
+            {presetColors.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`h-8 w-8 rounded-full border-2 transition-all ${
+                  formColor === color
+                    ? "border-white scale-110"
+                    : "border-transparent"
+                }`}
+                style={{ backgroundColor: color }}
+                onClick={() => setFormColor(color)}
+              />
+            ))}
+          </div>
+        </div>
+        <Button type="submit" className="w-full">
+          {submitLabel}
+        </Button>
+      </form>
+    );
   }
 
   return (
@@ -78,7 +146,7 @@ export default function TagsPage() {
             Organize transações com tags personalizadas
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger render={<Button />}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Tag
@@ -87,41 +155,20 @@ export default function TagsPage() {
             <DialogHeader>
               <DialogTitle>Criar Tag</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Nome</Label>
-                <Input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Ex: Marketing, Fornecedor..."
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cor</Label>
-                <div className="flex flex-wrap gap-2">
-                  {presetColors.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      className={`h-8 w-8 rounded-full border-2 transition-all ${
-                        newColor === color
-                          ? "border-white scale-110"
-                          : "border-transparent"
-                      }`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => setNewColor(color)}
-                    />
-                  ))}
-                </div>
-              </div>
-              <Button type="submit" className="w-full">
-                Criar Tag
-              </Button>
-            </form>
+            <TagForm onSubmit={handleCreate} submitLabel="Criar Tag" />
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) { setEditingTag(null); resetForm(); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Tag</DialogTitle>
+          </DialogHeader>
+          <TagForm onSubmit={handleEdit} submitLabel="Salvar" />
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {tags.map((tag) => (
@@ -137,14 +184,24 @@ export default function TagsPage() {
                 />
                 {tag.name}
               </Badge>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-red-500"
-                onClick={() => handleDelete(tag.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  onClick={() => openEdit(tag)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                  onClick={() => handleDelete(tag.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
