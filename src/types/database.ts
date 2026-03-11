@@ -274,6 +274,119 @@ export type Database = {
           },
         ];
       };
+      recurring_transactions: {
+        Row: {
+          id: string;
+          organization_id: string;
+          cash_account_id: string;
+          destination_account_id: string | null;
+          amount: number;
+          type: "income" | "expense" | "transfer";
+          description: string;
+          category_id: string | null;
+          frequency: "daily" | "weekly" | "monthly" | "yearly";
+          start_date: string;
+          next_date: string;
+          end_date: string | null;
+          is_active: boolean;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          cash_account_id: string;
+          destination_account_id?: string | null;
+          amount: number;
+          type: "income" | "expense" | "transfer";
+          description?: string;
+          category_id?: string | null;
+          frequency?: "daily" | "weekly" | "monthly" | "yearly";
+          start_date?: string;
+          next_date?: string;
+          end_date?: string | null;
+          is_active?: boolean;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          cash_account_id?: string;
+          destination_account_id?: string | null;
+          amount?: number;
+          type?: "income" | "expense" | "transfer";
+          description?: string;
+          category_id?: string | null;
+          frequency?: "daily" | "weekly" | "monthly" | "yearly";
+          start_date?: string;
+          next_date?: string;
+          end_date?: string | null;
+          is_active?: boolean;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transactions_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recurring_transactions_cash_account_id_fkey";
+            columns: ["cash_account_id"];
+            isOneToOne: false;
+            referencedRelation: "cash_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recurring_transactions_destination_account_id_fkey";
+            columns: ["destination_account_id"];
+            isOneToOne: false;
+            referencedRelation: "cash_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recurring_transactions_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      recurring_transaction_tags: {
+        Row: {
+          recurring_transaction_id: string;
+          tag_id: string;
+        };
+        Insert: {
+          recurring_transaction_id: string;
+          tag_id: string;
+        };
+        Update: {
+          recurring_transaction_id?: string;
+          tag_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transaction_tags_recurring_transaction_id_fkey";
+            columns: ["recurring_transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "recurring_transactions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recurring_transaction_tags_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: false;
+            referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       categories: {
         Row: {
           id: string;
@@ -325,6 +438,7 @@ export type Database = {
       };
     };
     Enums: {
+      recurrence_frequency: "daily" | "weekly" | "monthly" | "yearly";
       account_type: "personal" | "company" | "cash2";
       invitation_status: "pending" | "accepted" | "expired";
       member_role: "owner" | "admin" | "member";

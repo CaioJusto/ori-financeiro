@@ -11,6 +11,7 @@ import {
   Building2,
   ChevronDown,
   FileBarChart,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -37,7 +38,8 @@ import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Transações", href: "/transactions", icon: ArrowLeftRight },
+  { title: "Transacoes", href: "/transactions", icon: ArrowLeftRight },
+  { title: "Recorrencias", href: "/recurring", icon: RefreshCw },
   { title: "Contas", href: "/accounts", icon: Wallet },
   { title: "Tags", href: "/tags", icon: Tags },
   { title: "Categorias", href: "/categories", icon: FolderTree },
