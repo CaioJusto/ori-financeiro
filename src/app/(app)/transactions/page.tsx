@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, ArrowUpRight, ArrowDownLeft, ArrowLeftRight, Search, X, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Database } from "@/types/database";
 
-type Category = { id: string; name: string; color: string | null };
+type Category = { id: string; name: string; color?: string | null };
 
 type Transaction = Database["public"]["Tables"]["transactions"]["Row"] & {
   cash_accounts: { name: string } | null;
@@ -127,12 +127,12 @@ export default function TransactionsPage() {
     const [accountsRes, tagsRes, categoriesRes] = await Promise.all([
       supabase.from("cash_accounts").select("id, name").eq("organization_id", orgId),
       supabase.from("tags").select("id, name, color").eq("organization_id", orgId),
-      supabase.from("categories").select("id, name, color").eq("organization_id", orgId).order("name"),
+      supabase.from("categories").select("id, name").eq("organization_id", orgId).order("name"),
     ]);
 
     setAccounts((accountsRes.data as { id: string; name: string }[]) ?? []);
     setTags((tagsRes.data as { id: string; name: string; color: string }[]) ?? []);
-    setCategories((categoriesRes.data as Category[]) ?? []);
+    setCategories((categoriesRes.data as unknown as Category[]) ?? []);
 
     if (accountsRes.data?.length && !form.cash_account_id) {
       setForm((f) => ({ ...f, cash_account_id: (accountsRes.data as { id: string }[])[0].id }));
@@ -163,14 +163,14 @@ export default function TransactionsPage() {
     // Get filtered + paginated data
     let dataQuery = supabase
       .from("transactions")
-      .select("*, cash_accounts(name), categories(id, name, color)")
+      .select("*, cash_accounts(name), categories(id, name)")
       .eq("organization_id", orgId)
       .order("date", { ascending: false })
       .range(from, to);
     dataQuery = applyFilters(dataQuery, tagTxnIds);
 
     const { data: txnsRaw } = await dataQuery;
-    const txns = txnsRaw as (Database["public"]["Tables"]["transactions"]["Row"] & { cash_accounts: { name: string } | null; categories: { id: string; name: string; color: string | null } | null })[] | null;
+    const txns = txnsRaw as (Database["public"]["Tables"]["transactions"]["Row"] & { cash_accounts: { name: string } | null; categories: { id: string; name: string; color?: string | null } | null })[] | null;
 
     if (txns) {
       const txnIds = txns.map((t) => t.id);

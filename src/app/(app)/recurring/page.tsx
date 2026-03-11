@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import type { Database } from "@/types/database";
 
-type Category = { id: string; name: string; color: string | null };
+type Category = { id: string; name: string; color?: string | null };
 
 type RecurringTransaction =
   Database["public"]["Tables"]["recurring_transactions"]["Row"] & {
@@ -112,7 +112,7 @@ export default function RecurringPage() {
         .eq("organization_id", orgId),
       supabase
         .from("categories")
-        .select("id, name, color")
+        .select("id, name")
         .eq("organization_id", orgId)
         .order("name"),
     ]);
@@ -123,7 +123,7 @@ export default function RecurringPage() {
     setTags(
       (tagsRes.data as { id: string; name: string; color: string }[]) ?? []
     );
-    setCategories((categoriesRes.data as Category[]) ?? []);
+    setCategories((categoriesRes.data as unknown as Category[]) ?? []);
 
     if (accountsRes.data?.length && !form.cash_account_id) {
       setForm((f) => ({
@@ -135,7 +135,7 @@ export default function RecurringPage() {
     // Load recurring transactions
     const { data: recRaw } = await supabase
       .from("recurring_transactions")
-      .select("*, cash_accounts(name), categories(id, name, color)")
+      .select("*, cash_accounts(name), categories(id, name)")
       .eq("organization_id", orgId)
       .order("next_date", { ascending: true });
 
@@ -143,7 +143,7 @@ export default function RecurringPage() {
       (recRaw as
         | (Database["public"]["Tables"]["recurring_transactions"]["Row"] & {
             cash_accounts: { name: string } | null;
-            categories: { id: string; name: string; color: string | null } | null;
+            categories: { id: string; name: string; color?: string | null } | null;
           })[]
         | null) ?? [];
 

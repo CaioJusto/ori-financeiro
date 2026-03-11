@@ -72,7 +72,7 @@ export default function ReportsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<{ id: string; name: string }[]>([]);
   const [tags, setTags] = useState<{ id: string; name: string; color: string }[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string; color: string | null }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; color?: string | null }[]>([]);
   const [txnTagMap, setTxnTagMap] = useState<Map<string, string[]>>(new Map());
   const [loading, setLoading] = useState(true);
 
@@ -107,7 +107,7 @@ export default function ReportsPage() {
         .eq("organization_id", orgId),
       supabase
         .from("categories")
-        .select("id, name, color")
+        .select("id, name")
         .eq("organization_id", orgId),
     ]);
 
@@ -115,7 +115,7 @@ export default function ReportsPage() {
     setTransactions(txns);
     setAccounts((accountsRes.data as { id: string; name: string }[]) ?? []);
     setTags((tagsRes.data as { id: string; name: string; color: string }[]) ?? []);
-    setCategories((categoriesRes.data as { id: string; name: string; color: string | null }[]) ?? []);
+    setCategories((categoriesRes.data as unknown as { id: string; name: string; color?: string | null }[]) ?? []);
 
     // Load tag mappings
     const txnIds = txns.map((t) => t.id);
